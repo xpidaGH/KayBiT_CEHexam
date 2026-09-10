@@ -1,0 +1,6 @@
+{
+  "name": "KayBiT_CEHexam",
+  "description": "All-in-one preparation app for CEH Written and Practical exams with global command & topic search, domain progress ring tracking, hands-on labs, living command sheets, video masterclasses, tools checklist, and multilingual user guide.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
