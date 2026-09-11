@@ -10,6 +10,7 @@ import { UserGuideModal } from './components/UserGuideModal';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { WrittenExamView } from './components/WrittenExamView';
 import { PracticalExamView } from './components/PracticalExamView';
+import { DarkWebBlueprintView } from './components/DarkWebBlueprintView';
 import { ToolsChecklistView } from './components/ToolsChecklistView';
 import { ProgrammerMethodologyView } from './components/ProgrammerMethodologyView';
 import { PracticeTestsView } from './components/PracticeTestsView';
@@ -30,7 +31,7 @@ import {
 export default function App() {
   const [activeTab, setActiveTab] = useState<ExamTab>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB);
-    if (saved && ['written', 'practical', 'progress', 'tools', 'methodology', 'tests', 'installation'].includes(saved)) {
+    if (saved && ['written', 'practical', 'darkweb', 'progress', 'tools', 'methodology', 'tests', 'installation'].includes(saved)) {
       return saved as ExamTab;
     }
     return 'written';
@@ -127,6 +128,7 @@ export default function App() {
         {/* View Switcher */}
         {activeTab === 'written' && <WrittenExamView onNavigateToProgress={() => setActiveTab('progress')} />}
         {activeTab === 'practical' && <PracticalExamView />}
+        {activeTab === 'darkweb' && <DarkWebBlueprintView />}
         {activeTab === 'progress' && <DomainProgressTracker />}
         {activeTab === 'tools' && <ToolsChecklistView />}
         {activeTab === 'methodology' && <ProgrammerMethodologyView />}

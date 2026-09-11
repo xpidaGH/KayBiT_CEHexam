@@ -1,4 +1,4 @@
-export type ExamTab = 'written' | 'practical' | 'progress' | 'tools' | 'methodology' | 'tests' | 'installation';
+export type ExamTab = 'written' | 'practical' | 'progress' | 'darkweb' | 'tools' | 'methodology' | 'tests' | 'installation';
 
 export interface DomainTaskItem {
   id: string;
@@ -119,6 +119,7 @@ export interface ProgrammingScriptSnippet {
   filename: string;
   code: string;
   notes: string;
+  runCommand?: string;
 }
 
 export interface LivingCommandItem {
@@ -146,3 +147,63 @@ export interface GlobalSearchItem {
   copyable?: string;
   url?: string;
 }
+
+export interface NetworkSpectrumTier {
+  id: string;
+  name: string;
+  commonAlias: string;
+  estimatedVolume: string;
+  dnsMechanism: string;
+  portsAndProtocols: string[];
+  indexingMechanism: string;
+  encryptionSecurity: string;
+  accessMethod: string;
+  cehExamTraps: string[];
+  coreCharacteristics: string[];
+  realWorldExamples: string[];
+}
+
+export interface OnionCircuitStep {
+  stepNumber: number;
+  phase: string;
+  cellType: string;
+  source: string;
+  destination: string;
+  cryptoLayer: string;
+  action: string;
+  whatNodeKnows: {
+    knowsClientIP: boolean;
+    knowsNextHop: boolean;
+    knowsPrevHop: boolean;
+    knowsTargetDestination: boolean;
+    canReadPayload: boolean;
+  };
+  explanation: string;
+  securityImpact: string;
+}
+
+export interface DarkWebObjectiveItem {
+  id: string;
+  category: 'spectrum' | 'handshake' | 'crypto' | 'intel' | 'threats';
+  title: string;
+  cehSignificance: string;
+  description: string;
+  verificationQuestion: string;
+  verifiedAnswer: string;
+}
+
+export interface TorScraperScript {
+  id: string;
+  language: string;
+  filename: string;
+  purpose: string;
+  speedRating: string;
+  executionComplexity: 'Easy' | 'Intermediate' | 'Advanced';
+  regexPattern: string;
+  targetEndpoints: string[];
+  dependencies: string[];
+  code: string;
+  usageInstructions: string[];
+  sampleOutput: string;
+}
+

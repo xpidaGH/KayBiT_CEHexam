@@ -14,23 +14,26 @@ import {
   Code2,
   CheckCircle2,
   Circle,
-  PieChart
+  PieChart,
+  PenLine
 } from 'lucide-react';
 import { LAB_ENVIRONMENTS, GITHUB_REPO_NOTES, VIDEO_COURSES } from '../data/cehWrittenData';
 import { LabEnvironment, GitHubRepoNote, VideoCourse } from '../types';
 import { STORAGE_KEYS } from '../data/appConfig';
 import { CircularProgressRing } from './CircularProgressRing';
+import { WrittenDomainScratchpad } from './WrittenDomainScratchpad';
 
 interface WrittenExamViewProps {
   onNavigateToProgress?: () => void;
 }
 
 export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToProgress }) => {
-  const [subTab, setSubTab] = useState<'labs' | 'notes' | 'videos'>('labs');
+  const [subTab, setSubTab] = useState<'labs' | 'notes' | 'videos' | 'scratchpad'>('labs');
   const [selectedLab, setSelectedLab] = useState<LabEnvironment>(LAB_ENVIRONMENTS[0]);
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepoNote>(GITHUB_REPO_NOTES[0]);
   const [selectedVideo, setSelectedVideo] = useState<VideoCourse>(VIDEO_COURSES[0]);
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
+  const [targetScratchpadDomain, setTargetScratchpadDomain] = useState<string>('domain-2');
   
   // Completed labs & notes tracking
   const [completedLabs, setCompletedLabs] = useState<Record<string, boolean>>(() => {
@@ -90,6 +93,22 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
   const [studentNotes, setStudentNotes] = useState<string>(() => {
     return localStorage.getItem(STORAGE_KEYS.WRITTEN_NOTES) || '';
   });
+
+  const domainNotesCount = useMemo(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.WRITTEN_DOMAIN_NOTES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Object.values(parsed).filter((v: any) => typeof v === 'string' && v.trim().length > 0).length;
+      }
+    } catch {}
+    return 0;
+  }, [subTab]);
+
+  const handleOpenDomainScratchpad = (domainId: string) => {
+    setTargetScratchpadDomain(domainId);
+    setSubTab('scratchpad');
+  };
 
   const handleCopy = (cmd: string) => {
     navigator.clipboard.writeText(cmd);
@@ -191,6 +210,19 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
             <Play className="w-4 h-4" />
             <span>Video Courses & Player Applet</span>
           </button>
+
+          <button
+            id="subtab-scratchpad"
+            onClick={() => setSubTab('scratchpad')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              subTab === 'scratchpad'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-700'
+            }`}
+          >
+            <PenLine className="w-4 h-4" />
+            <span>Domain Scratchpad ({domainNotesCount}/9 Domains)</span>
+          </button>
         </div>
       </div>
 
@@ -246,7 +278,21 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  id={`btn-lab-domain-notes-${selectedLab.id}`}
+                  type="button"
+                  onClick={() => {
+                    const targetDomain = selectedLab.category === 'cisco' ? 'domain-4' : selectedLab.category === 'local' ? 'domain-5' : 'domain-2';
+                    handleOpenDomainScratchpad(targetDomain);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+                  title="Jot notes for this lab's domain in the Domain Scratchpad"
+                >
+                  <PenLine className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Jot Domain Notes</span>
+                </button>
+
                 <button
                   id={`btn-toggle-lab-${selectedLab.id}`}
                   onClick={() => toggleLabComplete(selectedLab.id)}
@@ -397,7 +443,21 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  id={`btn-repo-domain-notes-${selectedRepo.id}`}
+                  type="button"
+                  onClick={() => {
+                    const targetDomain = selectedRepo.id === 'mr-infect' ? 'domain-2' : selectedRepo.id === 'phirojshah' ? 'domain-3' : 'domain-4';
+                    handleOpenDomainScratchpad(targetDomain);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+                  title="Jot domain notes for this repository topic in the Domain Scratchpad"
+                >
+                  <PenLine className="w-3.5 h-3.5 text-teal-400" />
+                  <span>Jot Domain Notes</span>
+                </button>
+
                 <button
                   id={`btn-toggle-note-${selectedRepo.id}`}
                   onClick={() => toggleNoteComplete(selectedRepo.id)}
@@ -597,7 +657,15 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
                     <Terminal className="w-3.5 h-3.5 text-teal-400" />
                     <span>Personal Student Video Notes</span>
                   </h4>
-                  <span className="text-[10px] text-slate-500">Auto-saved to device</span>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDomainScratchpad('domain-2')}
+                    className="flex items-center gap-1 text-[11px] text-teal-400 hover:text-teal-300 font-semibold transition-colors"
+                    title="Open the 9-domain comprehensive scratchpad"
+                  >
+                    <PenLine className="w-3 h-3" />
+                    <span>Open Domain Scratchpad &rarr;</span>
+                  </button>
                 </div>
                 <textarea
                   id="written-exam-notes-area"
@@ -611,6 +679,14 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
             </div>
           </div>
         </div>
+      )}
+
+      {/* SECTION 4: Domain-Specific Study Scratchpad */}
+      {subTab === 'scratchpad' && (
+        <WrittenDomainScratchpad
+          initialDomainId={targetScratchpadDomain}
+          onNavigateToDomainProgress={onNavigateToProgress}
+        />
       )}
     </div>
   );

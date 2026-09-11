@@ -34,6 +34,9 @@ export const STORAGE_KEYS = {
   DOMAIN_PROGRESS: 'kaybit_ceh_domain_progress',
   COMPLETED_LABS: 'kaybit_ceh_completed_labs',
   COMPLETED_NOTES: 'kaybit_ceh_completed_notes',
+  DARKWEB_PROGRESS: 'kaybit_ceh_darkweb_progress',
+  DARKWEB_NOTES: 'kaybit_ceh_darkweb_notes',
+  WRITTEN_DOMAIN_NOTES: 'kaybit_ceh_written_domain_notes',
 } as const;
 
 /**
@@ -57,6 +60,12 @@ export const NAV_ITEMS_CONFIG: NavItemConfig[] = [
     label: 'Practical Exam', 
     badge: '14/20 Pass', 
     description: 'The Big Three Cheat Sheets & The 4 Practical Pillars' 
+  },
+  { 
+    id: 'darkweb', 
+    label: 'Dark Web Blueprint', 
+    badge: 'Tor Intel', 
+    description: 'Network Boundaries, Tor Handshake Mechanics, Bootstrap Tracker & Threat Intel Scraper' 
   },
   { 
     id: 'progress', 

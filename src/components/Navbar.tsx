@@ -10,7 +10,8 @@ import {
   FileText, 
   Globe,
   PieChart,
-  Search
+  Search,
+  Lock
 } from 'lucide-react';
 import { ExamTab } from '../types';
 import { SUPPORTED_LANGUAGES } from '../data/translations';
@@ -39,6 +40,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         return <BookOpen className="w-4 h-4" />;
       case 'practical':
         return <ShieldCheck className="w-4 h-4" />;
+      case 'darkweb':
+        return <Lock className="w-4 h-4" />;
       case 'progress':
         return <PieChart className="w-4 h-4" />;
       case 'tools':

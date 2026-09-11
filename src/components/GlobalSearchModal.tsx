@@ -17,7 +17,8 @@ import {
   Sparkles,
   Command as CommandIcon,
   Layers,
-  Wrench
+  Wrench,
+  Lock
 } from 'lucide-react';
 import { ExamTab, GlobalSearchItem, SearchFilterCategory } from '../types';
 import { 
@@ -139,6 +140,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         return { label: 'Written Exam', icon: <BookOpen className="w-3.5 h-3.5 text-emerald-400" /> };
       case 'practical':
         return { label: 'Practical Exam', icon: <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" /> };
+      case 'darkweb':
+        return { label: 'Dark Web Blueprint', icon: <Lock className="w-3.5 h-3.5 text-purple-400" /> };
       case 'methodology':
         return { label: 'Methodology & Scripts', icon: <Cpu className="w-3.5 h-3.5 text-purple-400" /> };
       case 'tools':

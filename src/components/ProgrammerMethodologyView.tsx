@@ -26,7 +26,7 @@ import { STORAGE_KEYS, LIVING_COMMAND_DOMAINS, LIVING_COMMAND_ADD_OPTIONS } from
 export const ProgrammerMethodologyView: React.FC = () => {
   const [subTab, setSubTab] = useState<'living-sheet' | 'pacing-scripts' | 'focus-why'>('living-sheet');
   const [selectedDomain, setSelectedDomain] = useState<string>('All');
-  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Living Commands persistent state
   const [commands, setCommands] = useState<LivingCommandItem[]>(() => {
@@ -61,10 +61,90 @@ export const ProgrammerMethodologyView: React.FC = () => {
 
   const activeScenario = OUTPUT_ANALYSIS_SCENARIOS[activeScenarioIdx];
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedText(text);
-    setTimeout(() => setCopiedText(null), 2000);
+  const handleCopy = (text: string, id?: string) => {
+    const targetId = id || text;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+    } catch (err) {
+      console.error('Failed to copy to clipboard', err);
+    }
+    setCopiedId(targetId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const CopyButton = ({
+    id,
+    text,
+    label = 'Copy to Clipboard',
+    copiedLabel = 'Copied to Clipboard!',
+    className = '',
+    variant = 'outline',
+    size = 'xs'
+  }: {
+    id: string;
+    text: string;
+    label?: string;
+    copiedLabel?: string;
+    className?: string;
+    variant?: 'primary' | 'outline' | 'subtle' | 'ghost';
+    size?: 'xs' | 'sm';
+  }) => {
+    const isCopied = copiedId === id;
+    const base = 'inline-flex items-center gap-1.5 font-medium transition-all select-none focus:outline-none focus:ring-1 focus:ring-emerald-500';
+    let sizeStyle = size === 'xs' ? 'px-2.5 py-1 text-xs rounded-lg' : 'px-3 py-1.5 text-xs rounded-lg';
+    let variantStyle = '';
+
+    if (variant === 'primary') {
+      variantStyle = isCopied
+        ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
+        : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30';
+    } else if (variant === 'outline') {
+      variantStyle = isCopied
+        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 font-semibold'
+        : 'bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80';
+    } else if (variant === 'subtle') {
+      variantStyle = isCopied
+        ? 'text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded'
+        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 px-2 py-0.5 rounded';
+      sizeStyle = 'text-xs';
+    } else if (variant === 'ghost') {
+      variantStyle = isCopied
+        ? 'text-emerald-400 font-semibold'
+        : 'text-slate-400 hover:text-emerald-400';
+      sizeStyle = 'p-1 text-xs';
+    }
+
+    return (
+      <button
+        id={`btn-copy-${id}`}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleCopy(text, id);
+        }}
+        className={`${base} ${sizeStyle} ${variantStyle} ${className}`}
+        title={isCopied ? copiedLabel : label}
+        aria-label={isCopied ? copiedLabel : label}
+      >
+        {isCopied ? (
+          <Check className={size === 'xs' ? 'w-3.5 h-3.5 text-emerald-400' : 'w-4 h-4 text-emerald-400'} />
+        ) : (
+          <Copy className={size === 'xs' ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+        )}
+        <span>{isCopied ? copiedLabel : label}</span>
+      </button>
+    );
   };
 
   const handleAddCommand = (e: React.FormEvent) => {
@@ -205,7 +285,16 @@ export const ProgrammerMethodologyView: React.FC = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <CopyButton
+                id="copy-filtered-commands"
+                text={filteredCommands.map((c) => `# [${c.domain}] ${c.tool}\n# ${c.description}\n${c.command}`).join('\n\n')}
+                label={`Copy ${selectedDomain === 'All' ? 'All' : selectedDomain} Commands`}
+                copiedLabel={`Copied ${filteredCommands.length} Commands!`}
+                variant="outline"
+                size="xs"
+              />
+
               <button
                 id="btn-add-custom-command"
                 onClick={() => setShowAddForm(!showAddForm)}
@@ -332,20 +421,31 @@ export const ProgrammerMethodologyView: React.FC = () => {
                   <p className="text-xs text-slate-400 mb-3">{item.description}</p>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-mono text-slate-500">Command:</span>
-                    <button
-                      onClick={() => handleCopy(item.command)}
-                      className="flex items-center gap-1 text-slate-400 hover:text-white"
-                    >
-                      {copiedText === item.command ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedText === item.command ? 'Copied' : 'Copy'}</span>
-                    </button>
+                <div className="space-y-1.5 mt-3 pt-3 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px]">
+                      <Terminal className="w-3 h-3 text-emerald-400" />
+                      <span>CLI Command</span>
+                    </div>
+                    <CopyButton
+                      id={`cmd-${item.id}`}
+                      text={item.command}
+                      label="Copy to Clipboard"
+                      copiedLabel="Copied to Clipboard!"
+                      variant="outline"
+                      size="xs"
+                    />
                   </div>
-                  <code className="block p-2 rounded bg-slate-950 text-xs font-mono text-emerald-300 break-all border border-slate-800/80">
-                    {item.command}
-                  </code>
+                  <div
+                    onClick={() => handleCopy(item.command, `cmd-${item.id}`)}
+                    title="Click to copy command to clipboard"
+                    className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-all cursor-pointer group flex items-center justify-between"
+                  >
+                    <code className="text-xs font-mono text-emerald-300 break-all select-all">
+                      <span className="text-emerald-600 mr-1.5 select-none">$</span>
+                      {item.command}
+                    </code>
+                  </div>
                 </div>
               </div>
             ))}
@@ -401,20 +501,65 @@ export const ProgrammerMethodologyView: React.FC = () => {
                 <p className="text-xs text-slate-300 mt-1 max-w-2xl">{selectedScript.notes}</p>
               </div>
 
-              <button
-                id="btn-copy-automation-script"
-                onClick={() => handleCopy(selectedScript.code)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-medium transition-colors"
-              >
-                {copiedText === selectedScript.code ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedText === selectedScript.code ? 'Copied Script!' : 'Copy Script'}</span>
-              </button>
+              <CopyButton
+                id={`script-header-${selectedScript.language}`}
+                text={selectedScript.code}
+                label="Copy Script to Clipboard"
+                copiedLabel="Copied Script to Clipboard!"
+                variant="primary"
+                size="sm"
+              />
             </div>
 
+            {/* Quick Terminal Execution Command */}
+            {selectedScript.runCommand && (
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 font-mono text-emerald-400 font-medium">
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>Quick Terminal Execution Command ({selectedScript.language})</span>
+                  </div>
+                  <CopyButton
+                    id={`script-run-${selectedScript.language}`}
+                    text={selectedScript.runCommand}
+                    label="Copy to Clipboard"
+                    copiedLabel="Copied to Clipboard!"
+                    variant="outline"
+                    size="xs"
+                  />
+                </div>
+                <div
+                  onClick={() => handleCopy(selectedScript.runCommand!, `script-run-${selectedScript.language}`)}
+                  title="Click to copy CLI run command to clipboard"
+                  className="p-2.5 rounded-lg bg-slate-900 border border-slate-800/90 text-xs font-mono text-emerald-300 break-all cursor-pointer hover:border-emerald-500/40 transition-colors"
+                >
+                  <span className="text-emerald-600 mr-1.5 select-none">$</span>
+                  {selectedScript.runCommand}
+                </div>
+              </div>
+            )}
+
             {/* Code Viewer */}
-            <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-300 overflow-x-auto whitespace-pre leading-relaxed">
-              {selectedScript.code}
-            </pre>
+            <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-950">
+              <div className="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
+                  <FileCode className="w-4 h-4 text-emerald-400" />
+                  <span className="font-semibold text-white">{selectedScript.filename}</span>
+                  <span className="text-slate-500 font-sans">({selectedScript.language} automation script)</span>
+                </div>
+                <CopyButton
+                  id={`script-code-body-${selectedScript.language}`}
+                  text={selectedScript.code}
+                  label="Copy to Clipboard"
+                  copiedLabel="Copied to Clipboard!"
+                  variant="outline"
+                  size="xs"
+                />
+              </div>
+              <pre className="p-4 text-xs font-mono text-emerald-300 overflow-x-auto whitespace-pre leading-relaxed max-h-[500px]">
+                {selectedScript.code}
+              </pre>
+            </div>
           </div>
         </div>
       )}
@@ -465,9 +610,32 @@ export const ProgrammerMethodologyView: React.FC = () => {
             </div>
 
             {/* Raw Terminal Output */}
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-slate-400 font-mono">Raw Terminal Capture:</span>
-              <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-300 font-mono ml-1">
+                    Raw Terminal Capture ({activeScenario.tool})
+                  </span>
+                </div>
+                <CopyButton
+                  id={`terminal-output-${activeScenario.id}`}
+                  text={activeScenario.terminalOutput}
+                  label="Copy to Clipboard"
+                  copiedLabel="Copied to Clipboard!"
+                  variant="outline"
+                  size="xs"
+                />
+              </div>
+              <pre
+                onClick={() => handleCopy(activeScenario.terminalOutput, `terminal-output-${activeScenario.id}`)}
+                title="Click to copy raw terminal capture"
+                className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-relaxed cursor-pointer hover:border-slate-700 transition-colors"
+              >
                 {activeScenario.terminalOutput}
               </pre>
             </div>
@@ -514,7 +682,7 @@ export const ProgrammerMethodologyView: React.FC = () => {
                 Verify Diagnostic
               </button>
             ) : (
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono font-bold text-teal-400">Verdict:</span>
                   <span className="text-xs font-bold text-white px-2 py-0.5 rounded bg-slate-900 border border-slate-700">
@@ -524,6 +692,45 @@ export const ProgrammerMethodologyView: React.FC = () => {
                 <p className="text-xs text-slate-300 leading-relaxed">{activeScenario.explanation}</p>
                 <div className="pt-2 border-t border-slate-850 text-xs text-amber-300">
                   <strong>Recommended Pro Action:</strong> {activeScenario.proAction}
+                </div>
+
+                {/* Pro Command Execution Block */}
+                {activeScenario.proCommand && (
+                  <div className="p-3 rounded-xl bg-slate-900 border border-emerald-500/30 space-y-1.5 mt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-400">
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>Recommended Remediation Command</span>
+                      </div>
+                      <CopyButton
+                        id={`pro-command-${activeScenario.id}`}
+                        text={activeScenario.proCommand}
+                        label="Copy to Clipboard"
+                        copiedLabel="Copied to Clipboard!"
+                        variant="outline"
+                        size="xs"
+                      />
+                    </div>
+                    <div
+                      onClick={() => handleCopy(activeScenario.proCommand!, `pro-command-${activeScenario.id}`)}
+                      title="Click to copy remediation command to clipboard"
+                      className="p-2 rounded bg-slate-950 text-xs font-mono text-emerald-300 break-all border border-slate-800 cursor-pointer hover:border-emerald-500/40 transition-colors"
+                    >
+                      <span className="text-emerald-600 mr-1.5 select-none">$</span>
+                      {activeScenario.proCommand}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-1">
+                  <CopyButton
+                    id={`scenario-notes-${activeScenario.id}`}
+                    text={`[CEH Output Analysis: ${activeScenario.title}]\nTool: ${activeScenario.tool}\nVerdict: ${activeScenario.verdict}\n\nExplanation:\n${activeScenario.explanation}\n\nPro Action:\n${activeScenario.proAction}${activeScenario.proCommand ? `\n\nCommand:\n${activeScenario.proCommand}` : ''}`}
+                    label="Copy Diagnostic Notes"
+                    copiedLabel="Copied Diagnostic Notes!"
+                    variant="subtle"
+                    size="xs"
+                  />
                 </div>
               </div>
             )}

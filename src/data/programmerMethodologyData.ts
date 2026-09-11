@@ -140,6 +140,7 @@ export const PROGRAMMER_AUTOMATION_SCRIPTS: ProgrammingScriptSnippet[] = [
     language: 'Python',
     purpose: 'Nmap XML Parser & Automatic Target Command Generator',
     filename: 'parse_nmap_targets.py',
+    runCommand: 'python3 parse_nmap_targets.py scan.xml',
     notes: 'Eliminates 30 minutes of manual log searching. Parses Nmap XML output, categorizes open ports, and automatically generates ready-to-run enum4linux, curl, and hydra commands.',
     code: `#!/usr/bin/env python3
 """
@@ -201,6 +202,7 @@ if __name__ == '__main__':
     language: 'Bash / Shell',
     purpose: 'Rapid Exam Subnet Triage & Output Directory Scaffolder',
     filename: 'ceh_exam_kickstart.sh',
+    runCommand: 'chmod +x ceh_exam_kickstart.sh && ./ceh_exam_kickstart.sh 192.168.1.0/24',
     notes: 'Sets up a desktop folder structure, launches a background nmap sweep, and isolates web and SMB targets into organized subfolders.',
     code: `#!/usr/bin/env bash
 # KayBiT CEH Exam Kickstart: Automated Folder & Recon Scaffolder
@@ -231,6 +233,7 @@ echo "[*] Golden Rule: Keep checking files as they complete to start answering e
     language: 'Go (Golang)',
     purpose: 'Concurrent HTTP Endpoint & Status Code Auditor',
     filename: 'ceh_web_probe.go',
+    runCommand: 'go run ceh_web_probe.go 10.10.12.50',
     notes: 'Compiled, blisteringly fast concurrent Go tool to audit multi-port web services across discovered exam IPs.',
     code: `package main
 
@@ -282,6 +285,7 @@ func main() {
     language: 'PowerShell',
     purpose: 'Windows Environment Audit & Local Token Inspector',
     filename: 'CEH_Windows_Audit.ps1',
+    runCommand: 'powershell -ExecutionPolicy Bypass -File .\\CEH_Windows_Audit.ps1',
     notes: 'Executed inside the exam Windows target/attacker box to inspect local administrators, open shares, and network connections.',
     code: `# KayBiT CEH Windows Target Audit Script
 # Run from PowerShell on Windows Host
@@ -312,6 +316,7 @@ Get-WmiObject -Class Win32_Service |
     language: 'Rust',
     purpose: 'High-Speed Subnet Ping Sweeper & Output Formatter',
     filename: 'ceh_pinger.rs',
+    runCommand: 'rustc -O ceh_pinger.rs && ./ceh_pinger 10.10.12.50',
     notes: 'Fast, safe, zero-dependency TCP connect scanner for high-speed port verification.',
     code: `// KayBiT CEH Rust TCP Fast Connect Sweeper
 // Compile: rustc -O ceh_pinger.rs
@@ -345,6 +350,7 @@ fn main() {
     language: 'JavaScript / Node.js',
     purpose: 'PCAP Plaintext Credential Sniffer & Stream Extractor',
     filename: 'parse_pcap_json.js',
+    runCommand: 'node parse_pcap_json.js capture.json',
     notes: 'Parses tshark JSON export to isolate form logins, HTTP Basic headers, and FTP credentials in seconds.',
     code: `// KayBiT CEH: Parse tshark JSON exports for credentials
 // Generate input with: tshark -r capture.pcap -T json > capture.json
@@ -396,6 +402,7 @@ export interface OutputAnalysisScenario {
   verdict: 'True Positive' | 'Timeout / Rate Limited' | 'False Positive' | 'Firewall Blocked';
   explanation: string;
   proAction: string;
+  proCommand?: string;
 }
 
 export const OUTPUT_ANALYSIS_SCENARIOS: OutputAnalysisScenario[] = [
@@ -426,7 +433,8 @@ back-end DBMS: MySQL >= 5.0.12`,
     correctIndex: 1,
     verdict: 'True Positive',
     explanation: 'Although the initial generic heuristic test gave a warning, SQLMap verified the vulnerability through a reproducible Boolean-based blind injection payload (id=1 AND 7129=7129) and successfully identified MySQL >= 5.0.12.',
-    proAction: 'Immediately proceed to database enumeration: add `--dbs --batch` to extract database names.'
+    proAction: 'Immediately proceed to database enumeration: add `--dbs --batch` to extract database names.',
+    proCommand: 'sqlmap -u "http://10.10.12.20/index.php?id=1" --dbs --batch'
   },
   {
     id: 'out-2',
@@ -449,7 +457,8 @@ back-end DBMS: MySQL >= 5.0.12`,
     correctIndex: 2,
     verdict: 'Timeout / Rate Limited',
     explanation: 'Running 16 or 32 tasks concurrently against weak virtual machine targets in exam environments frequently causes OpenSSH or Dropbear to reset connections or drop requests.',
-    proAction: 'Reduce the thread count to 4 or 2 using `-t 4` or `-t 2`, and add `-W 1` to pause between connection attempts.'
+    proAction: 'Reduce the thread count to 4 or 2 using `-t 4` or `-t 2`, and add `-W 1` to pause between connection attempts.',
+    proCommand: 'hydra -L users.txt -P /usr/share/wordlists/rockyou.txt ssh://10.10.12.20 -t 4 -W 1'
   },
   {
     id: 'out-3',
@@ -474,6 +483,7 @@ Nmap done: 1 IP address (1 host up) scanned in 12.44 seconds`,
     correctIndex: 1,
     verdict: 'Firewall Blocked',
     explanation: 'In Nmap, "filtered" means no response was received (packet dropped) or an ICMP unreachable error was returned, proving a stateful firewall or ACL blocked the probe.',
-    proAction: 'Try TCP ACK scan (`-sA`) to map firewall rules, or scan from another interface / check for alternative open ports like SSH.'
+    proAction: 'Try TCP ACK scan (`-sA`) to map firewall rules, or scan from another interface / check for alternative open ports like SSH.',
+    proCommand: 'nmap -sA -p 80,443,3389 10.10.12.90'
   }
 ];

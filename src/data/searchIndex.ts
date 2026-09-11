@@ -14,6 +14,12 @@ import {
 } from './cehPracticalData';
 import { EC_COUNCIL_EXAM_TOOLS } from './toolsChecklistData';
 import { EXAM_DOMAINS_PROGRESS } from './progressData';
+import { 
+  NETWORK_SPECTRUM_TIERS, 
+  ONION_CIRCUIT_STEPS, 
+  DARK_WEB_STUDY_OBJECTIVES, 
+  TOR_SCRAPER_SCRIPTS 
+} from './darkWebData';
 
 /**
  * Builds a unified, fast index of all CEH topics, commands, scripts, notes, labs, and tools.
@@ -257,6 +263,68 @@ function buildSearchIndex(): GlobalSearchItem[] {
     });
   });
 
+  // 10. Dark Web Blueprint & Network Spectrum (Dark Web module)
+  NETWORK_SPECTRUM_TIERS.forEach((tier) => {
+    items.push({
+      id: `darkweb-tier-${tier.id}`,
+      title: `${tier.name} (${tier.commonAlias}) - Network Spectrum`,
+      category: 'topic',
+      filterCategory: 'notes',
+      targetTab: 'darkweb',
+      badge: 'Network Spectrum',
+      description: `${tier.commonAlias}: ${tier.accessMethod}. DNS: ${tier.dnsMechanism}. Indexing: ${tier.indexingMechanism}`,
+      contentSnippet: tier.realWorldExamples.join(', '),
+      tags: ['spectrum', 'darkweb', 'tor', tier.id, 'surface', 'deep', 'dns', 'clearweb'],
+    });
+  });
+
+  // 11. Onion Circuit Steps & Handshake Mechanics
+  ONION_CIRCUIT_STEPS.forEach((step) => {
+    items.push({
+      id: `darkweb-circuit-${step.stepNumber}`,
+      title: `Tor Step ${step.stepNumber}: ${step.phase} (${step.cellType})`,
+      category: 'topic',
+      filterCategory: 'notes',
+      targetTab: 'darkweb',
+      badge: 'Onion Handshake',
+      description: `${step.action} -> ${step.explanation}`,
+      contentSnippet: `From: ${step.source} To: ${step.destination} | Impact: ${step.securityImpact}`,
+      tags: ['tor', 'circuit', 'handshake', step.cellType.toLowerCase(), 'guard', 'exit-node', 'middle-relay'],
+    });
+  });
+
+  // 12. Dark Web Study Objectives & Exam Verification
+  DARK_WEB_STUDY_OBJECTIVES.forEach((obj) => {
+    items.push({
+      id: `darkweb-obj-${obj.id}`,
+      title: `Objective: ${obj.title}`,
+      category: 'note',
+      filterCategory: 'notes',
+      targetTab: 'darkweb',
+      badge: 'Dark Web Objective',
+      description: `${obj.description} Significance: ${obj.cehSignificance}`,
+      contentSnippet: obj.verifiedAnswer,
+      tags: ['darkweb', 'objective', 'verification', 'ceh', obj.id],
+    });
+  });
+
+  // 13. Tor Exit Node Scraper Scripts
+  TOR_SCRAPER_SCRIPTS.forEach((script) => {
+    items.push({
+      id: `darkweb-scraper-${script.id}`,
+      title: `Threat Intel: ${script.filename} (${script.language})`,
+      category: 'script',
+      filterCategory: 'methodology',
+      targetTab: 'darkweb',
+      badge: `${script.language} Scraper`,
+      description: `${script.purpose} Regex: ${script.regexPattern}`,
+      contentSnippet: script.code.slice(0, 150),
+      tags: ['scraper', 'threat-intel', 'tor', 'exit-node', script.language.toLowerCase(), 'regex', 'iptables'],
+      toolOrLanguage: script.language,
+      copyable: script.code,
+    });
+  });
+
   return items;
 }
 
@@ -300,6 +368,9 @@ export function searchCEHItems(
 }
 
 export const POPULAR_SEARCH_SUGGESTIONS = [
+  'tor exit node',
+  'onion routing',
+  'clear web vs deep web',
   'nmap -sS',
   'sqlmap --dbs',
   'hydra ssh',
@@ -307,9 +378,9 @@ export const POPULAR_SEARCH_SUGGESTIONS = [
   'tshark POST',
   'python port scanner',
   'steghide extract',
-  'cisco packet tracer',
+  'garlic routing i2p',
+  'consensus tor',
   'wireshark tcp stream',
   'hashcat md5',
   'john rockyou',
-  'phirojshah piping',
 ];
