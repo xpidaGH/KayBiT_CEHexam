@@ -24,6 +24,7 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'bn', name: 'Bangla/Bengali', nativeName: 'বাংলা' },
   { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
   { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' },
+  { code: 'wuu', name: 'Wu Chinese (Shanghainese)', nativeName: '吴语 (上海话)' },
 ];
 
 export interface UserGuideContent {
@@ -444,6 +445,61 @@ export const USER_GUIDE_TRANSLATIONS: Record<string, UserGuideContent> = {
           'లివింగ్ కమాండ్ షీట్ - Markdown లోకి ఎగుమతి చేసుకునే సదుపాయం.',
           'Python, Bash, Go మరియు PowerShell లలో ఆటోమేషన్ స్క్రిప్ట్‌లు.'
         ]
+      }
+    ]
+  },
+  wuu: {
+    title: 'KayBiT_CEHexam: 学生搭教师使用指南 (吴语/上海话指南)',
+    badge: '官方考试准备手册',
+    lastUpdated: '2026年9月',
+    sections: [
+      {
+        id: 'overview',
+        heading: '1. 总体架构与考试目标 (Executive Overview)',
+        content: 'KayBiT_CEHexam 是专门为中级程序员（Python、JS、TypeScript、Java、Go、Rust、Bash等）设计个一站式跨平台网络安全认证准备系统。将 CEH 笔试（Written）理论知识搭 CEH 实验操作（Practical）现场实操完美结合。',
+        bulletPoints: [
+          '模块 1：CEH 笔试备考——包含虚拟实验环境（Cisco、DVWA/Juice Shop、TryHackMe）、精选 GitHub 笔记及视频播放器。',
+          '模块 2：CEH 实操备考——精选三大神级社区笔记（Samsar4、phirojshah、sariamubeen）、四大实战支柱搭 6 小时模拟机。',
+          '动态命令清单（Living Command Sheet）：分类归档网络侦察、Web 渗透、凭据破解、权限提升搭流量分析命令，支持一键导出 Markdown。',
+          '程序员专属自动化脚本工具：提供 Python、Bash、Go、Rust、PowerShell 多语言脚本，避免人工重复劳动。'
+        ]
+      },
+      {
+        id: 'written-guide',
+        heading: '2. CEH 笔试认证路径 (CEH Written Exam Track)',
+        content: 'CEH 笔试要求在 4 个钟头内完成 125 道多选题，覆盖 9 大安全知识域。系统提供针对性实验指南搭权威讲义复习。',
+        bulletPoints: [
+          '动手实验：连接 Cisco 实验、本地虚拟机沙箱（DVWA/OWASP Juice Shop 验证输入过滤失效）搭 TryHackMe 免费靶场。',
+          '笔记精粹：学习 Mr-Infect 协议蓝图、phirojshah 命令语法速查表搭 SNGWN 工具矩阵。',
+          '视频课堂：内置 2026 伦理黑客全流程精讲视频。'
+        ]
+      },
+      {
+        id: 'practical-guide',
+        heading: '3. CEH 实操挑战与三大神级仓库 (The Big Three)',
+        content: 'CEH Practical 是历时 6 小时的动手挑战赛，需要夺取 20 面旗帜中的至少 14 面。',
+        bulletPoints: [
+          '三大实战笔记：Samsar4（密码破解、加密学）、phirojshah（黄金法则：随时把网络扫描输出管道重定向到文件）搭 sariamubeen。',
+          '支柱 1 高级扫描：Nmap 深度参数（-O、-sV、-sC）、enum4linux 及 Windows 空会话利用。',
+          '支柱 2 Web 渗透：sqlmap 自动化注入提取数据库、密码哈希与目录遍历。',
+          '支柱 3 系统提权：Metasploit msfconsole、msfvenom 生成载荷及 Meterpreter getsystem。',
+          '支柱 4 隐写与流量分析：OpenStego、StegHide 隐写提取搭 Wireshark 抓包数据流分析。'
+        ]
+      },
+      {
+        id: 'methodology-guide',
+        heading: '4. 程序员高效备考心法与动态命令清单',
+        content: '发挥程序员编写脚本的优势，切忌陷入机械重复劳动。利用多语言脚本自动解析 Nmap XML 输出，提升答题节奏。',
+        bulletPoints: [
+          '建立活命令集：涵盖 Recon、WebApps、Cracking、PrivEsc、Stego 与 TrafficAnalysis。',
+          '把控节奏：遇到卡点 40 分钟内及时切换目标。',
+          '注重底层机制：用内置终端分析器辨别真实漏洞与防火墙丢包。'
+        ]
+      },
+      {
+        id: 'tools-guide',
+        heading: '5. EC-Council 官方实操工具清单',
+        content: '核对官方考试环境中预装的所有 GUI 与 CLI 工具，分类勾选进度并生成统一的 apt-get 脚本。'
       }
     ]
   }

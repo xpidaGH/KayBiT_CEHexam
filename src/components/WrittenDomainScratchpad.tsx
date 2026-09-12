@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   BookOpen, 
   Copy, 
@@ -19,6 +19,7 @@ import {
 import { EXAM_DOMAINS_PROGRESS } from '../data/progressData';
 import { ExamDomainProgress } from '../types';
 import { STORAGE_KEYS } from '../data/appConfig';
+import { triggerAutoSaveToast } from '../utils/autoSaveEvent';
 
 // Domain-tailored starter templates matching CEH v13 Blueprint objectives
 const DOMAIN_STARTER_TEMPLATES: Record<string, string> = {
@@ -283,16 +284,23 @@ export const WrittenDomainScratchpad: React.FC<WrittenDomainScratchpadProps> = (
   const [confirmClear, setConfirmClear] = useState<boolean>(false);
   const [lastSavedTime, setLastSavedTime] = useState<string>('Auto-saved');
 
+  const isInitialMount = useRef(true);
+
   // Sync to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.WRITTEN_DOMAIN_NOTES, JSON.stringify(domainNotes));
       const now = new Date();
       setLastSavedTime(`Saved at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+      } else {
+        triggerAutoSaveToast(`Scratchpad (${currentDomain.name.slice(0, 18)}...)`);
+      }
     } catch (err) {
       console.error('Failed saving domain notes to localStorage', err);
     }
-  }, [domainNotes]);
+  }, [domainNotes, currentDomain.name]);
 
   // Current selected domain object
   const currentDomain: ExamDomainProgress = useMemo(() => {

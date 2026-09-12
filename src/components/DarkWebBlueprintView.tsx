@@ -26,8 +26,10 @@ import {
   ArrowRight,
   Zap,
   CheckCircle2,
-  Filter
+  Filter,
+  Search
 } from 'lucide-react';
+import { CircularProgressRing } from './CircularProgressRing';
 import { 
   NETWORK_SPECTRUM_TIERS, 
   ONION_CIRCUIT_STEPS, 
@@ -407,7 +409,7 @@ export const DarkWebBlueprintView: React.FC = () => {
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2">
                   <h4 className="text-xs font-mono uppercase font-bold text-cyan-400 flex items-center gap-1.5">
-                    <SearchIcon className="w-3.5 h-3.5" />
+                    <Search className="w-3.5 h-3.5 text-cyan-400" />
                     <span>Search Engine Crawler & Indexing Mechanism</span>
                   </h4>
                   <p className="text-xs text-slate-300 leading-relaxed">
@@ -787,27 +789,13 @@ export const DarkWebBlueprintView: React.FC = () => {
                   <div className="text-lg font-mono font-bold text-cyan-400">{completedCount} / {totalObjectives}</div>
                   <div className="text-[11px] text-slate-400">Objectives Verified</div>
                 </div>
-                <div className="w-16 h-16 relative flex items-center justify-center">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                    <path
-                      className="text-slate-800"
-                      strokeWidth="3.5"
-                      stroke="currentColor"
-                      fill="none"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path
-                      className="text-cyan-400 transition-all duration-500 ease-out"
-                      strokeDasharray={`${progressPercent}, 100`}
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                      stroke="currentColor"
-                      fill="none"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                  </svg>
-                  <span className="absolute font-mono text-xs font-bold text-white">{progressPercent}%</span>
-                </div>
+                <CircularProgressRing
+                  percentage={progressPercent}
+                  size={64}
+                  strokeWidth={5}
+                  color="#22d3ee"
+                  trackColor="#1e293b"
+                />
               </div>
             </div>
 
@@ -1167,22 +1155,3 @@ export const DarkWebBlueprintView: React.FC = () => {
   );
 };
 
-function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}

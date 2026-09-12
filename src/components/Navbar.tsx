@@ -11,7 +11,11 @@ import {
   Globe,
   PieChart,
   Search,
-  Lock
+  Lock,
+  Layers,
+  Keyboard,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { ExamTab } from '../types';
 import { SUPPORTED_LANGUAGES } from '../data/translations';
@@ -24,6 +28,9 @@ interface NavbarProps {
   setSelectedLanguage: (lang: string) => void;
   onOpenUserGuide: () => void;
   onOpenGlobalSearch: () => void;
+  onOpenShortcuts?: () => void;
+  theme?: 'midnight' | 'deep-slate';
+  onToggleTheme?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -33,6 +40,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   setSelectedLanguage,
   onOpenUserGuide,
   onOpenGlobalSearch,
+  onOpenShortcuts,
+  theme = 'midnight',
+  onToggleTheme,
 }) => {
   const getNavIcon = (id: ExamTab) => {
     switch (id) {
@@ -50,6 +60,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         return <Cpu className="w-4 h-4" />;
       case 'tests':
         return <Award className="w-4 h-4" />;
+      case 'flashcards':
+        return <Layers className="w-4 h-4" />;
       case 'installation':
         return <Download className="w-4 h-4" />;
       default:
@@ -163,6 +175,46 @@ export const Navbar: React.FC<NavbarProps> = ({
               <FileText className="w-3.5 h-3.5 text-teal-400" />
               <span className="hidden sm:inline">User Guide</span>
             </button>
+
+            {/* Theme Toggle Button (Midnight vs Deep Slate) */}
+            {onToggleTheme && (
+              <button
+                id="btn-theme-toggle"
+                onClick={onToggleTheme}
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium border border-slate-800 hover:border-slate-700 transition-all shadow-sm group"
+                title={
+                  theme === 'midnight'
+                    ? "Theme: Midnight (High Contrast) • Switch to Deep Slate"
+                    : "Theme: Deep Slate (Softer Eye-Care) • Switch to Midnight"
+                }
+                aria-label="Toggle App Theme"
+              >
+                {theme === 'midnight' ? (
+                  <Moon className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
+                ) : (
+                  <Sun className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                )}
+                <span className="hidden xl:inline text-slate-300">
+                  {theme === 'midnight' ? 'Midnight' : 'Deep Slate'}
+                </span>
+              </button>
+            )}
+
+            {/* Keyboard Shortcuts Modal Button */}
+            {onOpenShortcuts && (
+              <button
+                id="btn-shortcuts-modal"
+                onClick={onOpenShortcuts}
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium border border-slate-800 hover:border-slate-700 transition-all shadow-sm group"
+                title="Keyboard Shortcuts & Navigation (Shift+/ or ?)"
+              >
+                <Keyboard className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden xl:inline text-slate-300">Shortcuts</span>
+                <kbd className="hidden sm:inline-flex items-center text-[10px] bg-slate-800/90 text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 font-mono">
+                  ?
+                </kbd>
+              </button>
+            )}
           </div>
         </div>
 
@@ -176,6 +228,31 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Search className="w-3.5 h-3.5" />
             <span>Search</span>
           </button>
+          {onOpenShortcuts && (
+            <button
+              id="btn-mobile-shortcuts"
+              onClick={onOpenShortcuts}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 font-medium"
+            >
+              <Keyboard className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Keys (?)</span>
+            </button>
+          )}
+          {onToggleTheme && (
+            <button
+              id="btn-mobile-theme-toggle"
+              onClick={onToggleTheme}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 font-medium"
+              title="Toggle Theme"
+            >
+              {theme === 'midnight' ? (
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              ) : (
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+              )}
+              <span>{theme === 'midnight' ? 'Midnight' : 'Deep Slate'}</span>
+            </button>
+          )}
           {NAV_ITEMS_CONFIG.map((item) => {
             const isActive = activeTab === item.id;
             return (

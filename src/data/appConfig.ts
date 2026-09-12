@@ -37,7 +37,35 @@ export const STORAGE_KEYS = {
   DARKWEB_PROGRESS: 'kaybit_ceh_darkweb_progress',
   DARKWEB_NOTES: 'kaybit_ceh_darkweb_notes',
   WRITTEN_DOMAIN_NOTES: 'kaybit_ceh_written_domain_notes',
+  FLASHCARDS: 'kaybit_ceh_flashcards',
+  FLASHCARD_STATS: 'kaybit_ceh_flashcard_stats',
+  AMBIENT_SOUND_SETTINGS: 'kaybit_ceh_ambient_sound_settings',
+  POMODORO_SETTINGS: 'kaybit_ceh_pomodoro_settings',
+  STUDY_GOALS: 'kaybit_ceh_study_goals',
+  APP_THEME: 'kaybit_ceh_theme',
+  TERMINAL_THEME: 'kaybit_ceh_terminal_theme',
 } as const;
+
+/**
+ * Supported 20 Programming Languages for Multi-Language Automation & Exploit Guides
+ */
+export const SUPPORTED_CURRICULUM_LANGUAGES = [
+  'Python', 'JavaScript', 'TypeScript', 'Java', 'C#', 'Kotlin', 'Dart/Flutter', 
+  'Bash/Shell', 'Rust', 'Go (Golang)', 'C++', 'C', 'PHP', 'Ruby', 'PowerShell', 
+  'SQL', 'R', 'Scala', 'MATLAB', 'COBOL & Assembly'
+] as const;
+
+export const FOOTER_QUICK_LINKS = [
+  { label: 'Written Blueprint', tab: 'written' as ExamTab },
+  { label: 'The Big 3 Cheat Sheets', tab: 'practical' as ExamTab },
+  { label: 'Tor Threat Intel', tab: 'darkweb' as ExamTab },
+  { label: 'Domain Rings', tab: 'progress' as ExamTab },
+  { label: 'Exam Tool Checklist', tab: 'tools' as ExamTab },
+  { label: 'Multi-Lang Lab', tab: 'methodology' as ExamTab },
+  { label: '6-Hour Mock Lab', tab: 'tests' as ExamTab },
+  { label: 'AI Flashcards', tab: 'flashcards' as ExamTab },
+  { label: 'Offline Builds', tab: 'installation' as ExamTab },
+] as const;
 
 /**
  * Navigation Bar Configuration Items
@@ -89,6 +117,12 @@ export const NAV_ITEMS_CONFIG: NavItemConfig[] = [
     label: 'Practice Tests', 
     badge: '20 Labs', 
     description: '20-Challenge 6-Hour Timed Practical Lab & Written Domain Quizzes' 
+  },
+  { 
+    id: 'flashcards', 
+    label: 'Flashcards', 
+    badge: 'Spaced Rep', 
+    description: 'Domain-Categorized Study Cards, Mastery Tracker & Custom Card Creator' 
   },
   { 
     id: 'installation', 

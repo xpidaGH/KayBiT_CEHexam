@@ -1,4 +1,4 @@
-export type ExamTab = 'written' | 'practical' | 'progress' | 'darkweb' | 'tools' | 'methodology' | 'tests' | 'installation';
+export type ExamTab = 'written' | 'practical' | 'progress' | 'darkweb' | 'tools' | 'methodology' | 'tests' | 'installation' | 'flashcards';
 
 export interface DomainTaskItem {
   id: string;
@@ -206,4 +206,24 @@ export interface TorScraperScript {
   usageInstructions: string[];
   sampleOutput: string;
 }
+
+export interface Flashcard {
+  id: string;
+  domainId: string; // e.g. 'domain-1' through 'domain-9', or 'general'
+  category: string;
+  question: string;
+  answer: string;
+  explanation?: string;
+  hint?: string;
+  codeSnippet?: string;
+  tags?: string[];
+  mnemonicVisualUrl?: string; // Generated Imagen visual aid data URL or image URL
+  mnemonicPrompt?: string; // Mnemonic visual concept prompt
+  isMastered?: boolean;
+  reviewCount?: number;
+  lastReviewedAt?: string;
+  createdAt: string;
+  isCustom?: boolean;
+}
+
 

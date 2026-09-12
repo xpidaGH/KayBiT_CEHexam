@@ -21,6 +21,7 @@ import { EXAM_DOMAINS_PROGRESS } from '../data/progressData';
 import { ExamDomainProgress, DomainTaskItem } from '../types';
 import { STORAGE_KEYS } from '../data/appConfig';
 import { CircularProgressRing } from './CircularProgressRing';
+import { DomainStudyGoalsTracker } from './DomainStudyGoalsTracker';
 
 export const DomainProgressTracker: React.FC = () => {
   // --- Persistent Storage State ---
@@ -328,6 +329,9 @@ export const DomainProgressTracker: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* CEH Daily & Weekly Study Goals Visualization */}
+      <DomainStudyGoalsTracker completedTasks={completedTasks} />
 
       {/* Filter and Search Bar */}
       <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">

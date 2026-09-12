@@ -10,16 +10,32 @@ import {
   EyeOff, 
   FolderDown, 
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Maximize2
 } from 'lucide-react';
 import { BIG_THREE_REPOSITORIES, PRACTICAL_PILLARS, BigThreeRepo } from '../data/cehPracticalData';
 import { PracticalPillar } from '../types';
+import { PracticalZenMode } from './PracticalZenMode';
 
 interface PracticalExamViewProps {
   onNavigateToSimulator?: () => void;
+  isZenMode?: boolean;
+  onToggleZenMode?: (zen: boolean) => void;
 }
 
-export const PracticalExamView: React.FC<PracticalExamViewProps> = ({ onNavigateToSimulator }) => {
+export const PracticalExamView: React.FC<PracticalExamViewProps> = ({ 
+  onNavigateToSimulator,
+  isZenMode,
+  onToggleZenMode 
+}) => {
+  const [internalZenMode, setInternalZenMode] = useState<boolean>(false);
+  const zenMode = isZenMode !== undefined ? isZenMode : internalZenMode;
+
+  const setZenMode = (val: boolean) => {
+    setInternalZenMode(val);
+    onToggleZenMode?.(val);
+  };
+
   const [activeSubTab, setActiveSubTab] = useState<'big-three' | 'pillars'>('pillars');
   const [selectedRepo, setSelectedRepo] = useState<BigThreeRepo>(BIG_THREE_REPOSITORIES[0]);
   const [selectedPillar, setSelectedPillar] = useState<PracticalPillar>(PRACTICAL_PILLARS[0]);
@@ -46,6 +62,16 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({ onNavigate
     }
   };
 
+  // Dedicated Zen Mode View: Hides sidebar and footer, focusing solely on lab instructions and command terminal
+  if (zenMode) {
+    return (
+      <PracticalZenMode
+        onExitZenMode={() => setZenMode(false)}
+        initialPillarId={selectedPillar.id}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Passing Criteria & Golden Rule Banner */}
@@ -63,6 +89,20 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({ onNavigate
               <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-mono">
                 Duration: 6 Hours
               </span>
+
+              {/* Zen Mode Toggle Button */}
+              <button
+                id="btn-toggle-zen-mode"
+                onClick={() => setZenMode(true)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all shadow-sm shadow-emerald-950/50 group"
+                title="Open Zen Focus Mode: Hides sidebar and footer, focusing solely on lab instructions and command terminal"
+              >
+                <Maximize2 className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span>Zen Mode</span>
+                <span className="hidden sm:inline text-[10px] text-emerald-400/80 font-normal">
+                  (Focus Lab & Terminal)
+                </span>
+              </button>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2">
@@ -205,7 +245,7 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({ onNavigate
 
             {/* Scenario Walkthrough & Terminal Simulation */}
             <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
                     Authentic Exam Scenario Walkthrough
@@ -214,6 +254,16 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({ onNavigate
                     <strong>Target:</strong> {selectedPillar.scenarioWalkthrough.target} | <strong>Objective:</strong> {selectedPillar.scenarioWalkthrough.objective}
                   </p>
                 </div>
+                <button
+                  id="btn-walkthrough-zen"
+                  type="button"
+                  onClick={() => setZenMode(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors"
+                  title="Open this lab and terminal in distraction-free Zen Mode"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Launch in Zen Mode</span>
+                </button>
               </div>
 
               {/* Steps */}

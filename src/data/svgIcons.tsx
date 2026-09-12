@@ -1,4 +1,5 @@
 import React from 'react';
+import { PLATFORM_VECTOR_PATHS } from './platformAssetsData';
 
 /**
  * Structured SVG Path Data & Platform Brand Icons
@@ -14,56 +15,56 @@ export const PlatformSvgIcons = {
   // Microsoft Windows Logo
   Windows: ({ className = 'w-5 h-5', size }: SvgIconProps) => (
     <svg
-      viewBox="0 0 88 88"
+      viewBox={PLATFORM_VECTOR_PATHS.windows.viewBox}
       className={className}
       width={size}
       height={size}
       fill="currentColor"
       aria-hidden="true"
     >
-      <path d="M0 12.402l35.687-4.86.016 34.423-35.67.202L0 12.402zm35.67 33.529l.028 34.453L.028 75.48.016 46.126l35.654-.195zM40.187 6.812L87.973 0v41.527l-47.786.33V6.812zm47.813 39.516v41.672L40.187 81.16V46.598l47.813-.27z" />
+      <path d={PLATFORM_VECTOR_PATHS.windows.d} />
     </svg>
   ),
 
   // Apple macOS / iOS Logo
   Apple: ({ className = 'w-5 h-5', size }: SvgIconProps) => (
     <svg
-      viewBox="0 0 170 170"
+      viewBox={PLATFORM_VECTOR_PATHS.apple.viewBox}
       className={className}
       width={size}
       height={size}
       fill="currentColor"
       aria-hidden="true"
     >
-      <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.67-7.81-11.96-14.34-5.87-8.91-10.43-18.99-13.67-30.23-3.24-11.24-4.86-21.84-4.86-31.8 0-14.56 3.69-26.62 11.08-36.19 7.39-9.56 16.63-14.45 27.72-14.67 4.58 0 9.83 1.25 15.75 3.76 5.92 2.51 9.77 3.82 11.55 3.93 1.57-.11 5.58-1.48 12.04-4.11 6.46-2.63 11.95-3.79 16.48-3.48 12.5.64 22.46 5.48 29.89 14.52-10.88 6.53-16.19 15.54-15.93 27.05.26 9.13 3.73 16.73 10.42 22.81 6.69 6.08 14.43 9.4 23.23 9.97-2.39 7.18-5.32 14.35-8.79 21.52zM119.22 31.84c0-7.18 2.58-13.8 7.74-19.86 5.16-6.06 11.55-9.98 19.17-11.76.22 1.09.33 2.07.33 2.94 0 7.07-2.7 13.8-8.1 20.19-5.4 6.39-11.97 10.19-19.7 11.4-.44-1.09-.66-2.07-.66-2.91z" />
+      <path d={PLATFORM_VECTOR_PATHS.apple.d} />
     </svg>
   ),
 
   // Google Android Robot Logo
   Android: ({ className = 'w-5 h-5', size }: SvgIconProps) => (
     <svg
-      viewBox="0 0 24 24"
+      viewBox={PLATFORM_VECTOR_PATHS.android.viewBox}
       className={className}
       width={size}
       height={size}
       fill="currentColor"
       aria-hidden="true"
     >
-      <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9996.4482.9996.9993.0001.5511-.4485.9997-.9996.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9996.4482.9996.9993 0 .5511-.4485.9997-.9996.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4128 13.8533 8.125 12 8.125c-1.8534 0-3.5903.2878-5.1367.8247L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.343 14.6589 0 18.761h24c-.343-4.1021-2.6889-7.5743-6.1185-9.4396" />
+      <path d={PLATFORM_VECTOR_PATHS.android.d} />
     </svg>
   ),
 
   // Linux Tux / Terminal Penguin
   Linux: ({ className = 'w-5 h-5', size }: SvgIconProps) => (
     <svg
-      viewBox="0 0 24 24"
+      viewBox={PLATFORM_VECTOR_PATHS.linux.viewBox}
       className={className}
       width={size}
       height={size}
       fill="currentColor"
       aria-hidden="true"
     >
-      <path d="M12.001 2c-2.485 0-4.5 2.015-4.5 4.5 0 .584.113 1.141.318 1.654C6.275 8.91 5 10.795 5 13c0 3.313 2.687 6 6 6h2c3.313 0 6-2.687 6-6 0-2.205-1.275-4.09-2.818-4.846.205-.513.318-1.07.318-1.654 0-2.485-2.015-4.5-4.499-4.5zm-1.5 4a1 1 0 110 2 1 1 0 010-2zm3 0a1 1 0 110 2 1 1 0 010-2z" />
+      <path d={PLATFORM_VECTOR_PATHS.linux.d} />
     </svg>
   ),
 
@@ -87,3 +88,4 @@ export const PlatformSvgIcons = {
     </svg>
   ),
 };
+

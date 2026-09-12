@@ -9,6 +9,39 @@
   }
 }
 
+/* Theme styles */
+.theme-midnight {
+  --app-bg: #030712;
+  --app-surface: #0b0f19;
+  --app-card: #0f172a;
+  --app-border: #1e293b;
+  background-color: #030712;
+}
+
+.theme-deep-slate {
+  --app-bg: #0f172a;
+  --app-surface: #1e293b;
+  --app-card: #334155;
+  --app-border: #334155;
+  background-color: #0f172a;
+}
+
+.theme-deep-slate .bg-slate-950 {
+  background-color: #0f172a !important;
+}
+
+.theme-deep-slate .bg-slate-900 {
+  background-color: #1e293b !important;
+}
+
+.theme-deep-slate .border-slate-800 {
+  border-color: #334155 !important;
+}
+
+.theme-deep-slate .border-slate-900 {
+  border-color: #1e293b !important;
+}
+
 /* Custom subtle scrollbars */
 ::-webkit-scrollbar {
   width: 8px;

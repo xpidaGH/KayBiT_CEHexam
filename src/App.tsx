@@ -16,22 +16,22 @@ import { ProgrammerMethodologyView } from './components/ProgrammerMethodologyVie
 import { PracticeTestsView } from './components/PracticeTestsView';
 import { InstallationView } from './components/InstallationView';
 import { DomainProgressTracker } from './components/DomainProgressTracker';
+import { FlashcardsView } from './components/FlashcardsView';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { Footer } from './components/Footer';
+import { AutoSaveToast } from './components/AutoSaveToast';
 import { APP_CONFIG, STORAGE_KEYS, NAV_ITEMS_CONFIG } from './data/appConfig';
 import { 
-  Shield, 
-  Terminal, 
-  CheckCircle2, 
-  Code2, 
-  Cpu, 
   ChevronRight,
   Sparkles,
-  Search
+  Search,
+  Keyboard
 } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ExamTab>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB);
-    if (saved && ['written', 'practical', 'darkweb', 'progress', 'tools', 'methodology', 'tests', 'installation'].includes(saved)) {
+    if (saved && ['written', 'practical', 'darkweb', 'progress', 'tools', 'methodology', 'tests', 'installation', 'flashcards'].includes(saved)) {
       return saved as ExamTab;
     }
     return 'written';
@@ -41,21 +41,81 @@ export default function App() {
     return localStorage.getItem(STORAGE_KEYS.SELECTED_LANGUAGE) || 'en';
   });
 
+  const [theme, setTheme] = useState<'midnight' | 'deep-slate'>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.APP_THEME);
+    return saved === 'deep-slate' ? 'deep-slate' : 'midnight';
+  });
+
   const [isUserGuideOpen, setIsUserGuideOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
 
-  // Global keyboard shortcut: Ctrl+K or Cmd+K to open search anywhere
+  // Global keyboard shortcuts:
+  // - Shift+/ or '?' : Open Keyboard Shortcuts Modal
+  // - Ctrl+K or Cmd+K : Open Global Quick Search
+  // - Esc : Close active modal
+  // - 1-9 (or Alt+1-9) : Direct navigation across all 9 views
+  // - Z/z : Toggle Practical Zen Mode (when on practical tab)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInputActive = activeEl && (
+        activeEl.tagName === 'INPUT' ||
+        activeEl.tagName === 'TEXTAREA' ||
+        activeEl.tagName === 'SELECT' ||
+        (activeEl as HTMLElement).isContentEditable
+      );
+
+      // 1. Search shortcut (⌘K or Ctrl+K) - works anywhere
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsSearchOpen((prev) => !prev);
+        return;
+      }
+
+      // 2. Keyboard shortcuts modal (Shift+/ or '?')
+      // Must not trigger if user is actively typing inside an input/textarea
+      if (!isInputActive) {
+        if (e.key === '?' || (e.shiftKey && (e.key === '/' || e.code === 'Slash'))) {
+          e.preventDefault();
+          setIsShortcutsOpen((prev) => !prev);
+          return;
+        }
+      }
+
+      // 3. Escape key closes open modals
+      if (e.key === 'Escape') {
+        if (isShortcutsOpen) {
+          e.preventDefault();
+          setIsShortcutsOpen(false);
+          return;
+        }
+      }
+
+      // 4. Number navigation 1-9 (or Alt+1-9) when no modals are open
+      if (!isInputActive && !isShortcutsOpen && !isSearchOpen && !isUserGuideOpen) {
+        const num = parseInt(e.key, 10);
+        if (!isNaN(num) && num >= 1 && num <= NAV_ITEMS_CONFIG.length && (e.altKey || (!e.ctrlKey && !e.metaKey && !e.shiftKey))) {
+          const target = NAV_ITEMS_CONFIG[num - 1];
+          if (target) {
+            e.preventDefault();
+            setActiveTab(target.id);
+            return;
+          }
+        }
+
+        // 5. 'Z' key to toggle Practical Zen mode
+        if ((e.key === 'z' || e.key === 'Z') && !e.ctrlKey && !e.metaKey && !e.altKey && activeTab === 'practical') {
+          e.preventDefault();
+          setIsZenMode((prev) => !prev);
+          return;
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isShortcutsOpen, isSearchOpen, isUserGuideOpen, activeTab]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, activeTab);
@@ -65,141 +125,121 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.SELECTED_LANGUAGE, selectedLanguage);
   }, [selectedLanguage]);
 
-  const activeNavConfig = NAV_ITEMS_CONFIG.find((item) => item.id === activeTab);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.APP_THEME, theme);
+  }, [theme]);
 
-  const supportedLanguagesList = [
-    'Python', 'JavaScript', 'TypeScript', 'Java', 'C#', 'Kotlin', 'Dart/Flutter', 
-    'Bash/Shell', 'Rust', 'Go (Golang)', 'C++', 'C', 'PHP', 'Ruby', 'PowerShell', 
-    'SQL', 'R', 'Scala', 'MATLAB', 'COBOL & Assembly'
-  ];
+  const [isZenMode, setIsZenMode] = useState<boolean>(false);
+
+  const activeNavConfig = NAV_ITEMS_CONFIG.find((item) => item.id === activeTab);
+  const inPracticalZen = isZenMode && activeTab === 'practical';
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'midnight' ? 'deep-slate' : 'midnight'));
+  };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
-      {/* Top Main Navigation */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        selectedLanguage={selectedLanguage}
-        setSelectedLanguage={setSelectedLanguage}
-        onOpenUserGuide={() => setIsUserGuideOpen(true)}
-        onOpenGlobalSearch={() => setIsSearchOpen(true)}
-      />
+    <div className={`min-h-screen text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950 transition-colors duration-200 ${
+      theme === 'deep-slate' ? 'bg-slate-900 theme-deep-slate' : 'bg-slate-950 theme-midnight'
+    }`}>
+      {/* Top Main Navigation (Hidden in Zen Mode) */}
+      {!inPracticalZen && (
+        <Navbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          selectedLanguage={selectedLanguage}
+          setSelectedLanguage={setSelectedLanguage}
+          onOpenUserGuide={() => setIsUserGuideOpen(true)}
+          onOpenGlobalSearch={() => setIsSearchOpen(true)}
+          onOpenShortcuts={() => setIsShortcutsOpen(true)}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+        />
+      )}
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Dynamic Context Header Bar with Quick Search Trigger */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-emerald-400 font-mono font-bold uppercase">{APP_CONFIG.appName}</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-            <span className="text-slate-300 font-medium">{activeNavConfig?.label}</span>
-            {activeNavConfig?.description && (
-              <span className="text-slate-500 hidden md:inline">• {activeNavConfig.description}</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              id="btn-context-search"
-              onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/70 text-[11px] font-medium transition-all group"
-            >
-              <Search className="w-3 h-3 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span>Lookup Commands & Topics</span>
-              <kbd className="hidden sm:inline text-[9px] bg-slate-900 text-slate-400 border border-slate-700 px-1 rounded font-mono">
-                ⌘K
-              </kbd>
-            </button>
-            <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Offline Ready</span>
+      <main className={`flex-1 w-full mx-auto ${inPracticalZen ? 'p-0' : 'max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-6'}`}>
+        {/* Dynamic Context Header Bar with Quick Search Trigger (Hidden in Zen Mode) */}
+        {!inPracticalZen && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-emerald-400 font-mono font-bold uppercase">{APP_CONFIG.appName}</span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+              <span className="text-slate-300 font-medium">{activeNavConfig?.label}</span>
+              {activeNavConfig?.description && (
+                <span className="text-slate-500 hidden md:inline">• {activeNavConfig.description}</span>
+              )}
             </div>
-            <button
-              id="btn-quick-practice"
-              onClick={() => setActiveTab('tests')}
-              className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>Launch 6h Simulator</span>
-            </button>
+
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <button
+                id="btn-context-search"
+                onClick={() => setIsSearchOpen(true)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/70 text-[11px] font-medium transition-all group"
+              >
+                <Search className="w-3 h-3 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span>Lookup Commands & Topics</span>
+                <kbd className="hidden sm:inline text-[9px] bg-slate-900 text-slate-400 border border-slate-700 px-1 rounded font-mono">
+                  ⌘K
+                </kbd>
+              </button>
+
+              <button
+                id="btn-context-shortcuts"
+                onClick={() => setIsShortcutsOpen(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/70 text-[11px] font-medium transition-all group"
+                title="Keyboard Shortcuts & Navigation (Shift+/ or ?)"
+              >
+                <Keyboard className="w-3 h-3 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden md:inline">Shortcuts</span>
+                <kbd className="text-[9px] bg-slate-900 text-slate-400 border border-slate-700 px-1 rounded font-mono">
+                  ?
+                </kbd>
+              </button>
+
+              <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Offline Ready</span>
+              </div>
+              <button
+                id="btn-quick-practice"
+                onClick={() => setActiveTab('tests')}
+                className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Launch 6h Simulator</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* View Switcher */}
         {activeTab === 'written' && <WrittenExamView onNavigateToProgress={() => setActiveTab('progress')} />}
-        {activeTab === 'practical' && <PracticalExamView />}
+        {activeTab === 'practical' && (
+          <PracticalExamView 
+            isZenMode={isZenMode}
+            onToggleZenMode={(val) => setIsZenMode(val)}
+            onNavigateToSimulator={() => setActiveTab('tests')}
+          />
+        )}
         {activeTab === 'darkweb' && <DarkWebBlueprintView />}
         {activeTab === 'progress' && <DomainProgressTracker />}
         {activeTab === 'tools' && <ToolsChecklistView />}
         {activeTab === 'methodology' && <ProgrammerMethodologyView />}
         {activeTab === 'tests' && <PracticeTestsView />}
+        {activeTab === 'flashcards' && <FlashcardsView />}
         {activeTab === 'installation' && <InstallationView />}
       </main>
 
-      {/* Multi-Language & Programming Curriculum Footer */}
-      <footer className="mt-auto border-t border-slate-900 bg-slate-950/80 py-8 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-1">
-              <p className="font-mono font-bold text-slate-300">
-                {APP_CONFIG.appName} — {APP_CONFIG.title}
-              </p>
-              <p className="text-slate-500">
-                Certified Ethical Hacker v13 Blueprint • Hands-on Labs & Living Automation Scripts
-              </p>
-            </div>
-            <div className="flex items-center gap-4 text-xs">
-              <button
-                onClick={() => setIsSearchOpen(true)}
-                className="text-slate-400 hover:text-emerald-400 transition-colors underline flex items-center gap-1"
-              >
-                <Search className="w-3 h-3 text-emerald-400" />
-                <span>Global Lookup (⌘K)</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('progress')}
-                className="text-slate-400 hover:text-emerald-400 transition-colors underline"
-              >
-                Domain Progress & Rings
-              </button>
-              <button
-                onClick={() => setIsUserGuideOpen(true)}
-                className="text-slate-400 hover:text-emerald-400 transition-colors underline"
-              >
-                Comprehensive User Guide
-              </button>
-              <button
-                onClick={() => setActiveTab('installation')}
-                className="text-slate-400 hover:text-emerald-400 transition-colors underline"
-              >
-                Native Platform Packaging
-              </button>
-              <button
-                onClick={() => setActiveTab('methodology')}
-                className="text-slate-400 hover:text-emerald-400 transition-colors underline"
-              >
-                Living Commands & Analyzer
-              </button>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-900/80">
-            <p className="text-[11px] text-slate-400 font-medium mb-1.5">
-              Engineered for intermediate software developers in 20 core programming languages:
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {supportedLanguagesList.map((lang, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-0.5 rounded bg-slate-900/90 border border-slate-800 text-[10px] font-mono text-slate-400"
-                >
-                  {lang}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Multi-Language & Programming Curriculum Footer (Hidden in Zen Mode) */}
+      {!inPracticalZen && (
+        <Footer
+          onOpenSearch={() => setIsSearchOpen(true)}
+          onOpenShortcuts={() => setIsShortcutsOpen(true)}
+          onOpenUserGuide={() => setIsUserGuideOpen(true)}
+          onNavigateTab={(tab) => setActiveTab(tab)}
+        />
+      )}
 
       {/* Comprehensive Multilingual User Guide Modal */}
       <UserGuideModal
@@ -218,6 +258,18 @@ export default function App() {
           setIsSearchOpen(false);
         }}
       />
+
+      {/* Keyboard Shortcuts & Navigation Cheat Sheet Modal (Shift+/) */}
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+        onNavigateToTab={(tab) => {
+          setActiveTab(tab);
+          setIsShortcutsOpen(false);
+        }}
+      />
+      {/* Global Auto-Save Notification Toast */}
+      <AutoSaveToast />
     </div>
   );
 }

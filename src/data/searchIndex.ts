@@ -20,6 +20,7 @@ import {
   DARK_WEB_STUDY_OBJECTIVES, 
   TOR_SCRAPER_SCRIPTS 
 } from './darkWebData';
+import { DEFAULT_CEH_FLASHCARDS } from './flashcardsData';
 
 /**
  * Builds a unified, fast index of all CEH topics, commands, scripts, notes, labs, and tools.
@@ -322,6 +323,22 @@ function buildSearchIndex(): GlobalSearchItem[] {
       tags: ['scraper', 'threat-intel', 'tor', 'exit-node', script.language.toLowerCase(), 'regex', 'iptables'],
       toolOrLanguage: script.language,
       copyable: script.code,
+    });
+  });
+
+  // 14. Flashcard Study Cards
+  DEFAULT_CEH_FLASHCARDS.forEach((card) => {
+    items.push({
+      id: `flashcard-${card.id}`,
+      title: `Flashcard: ${card.question.slice(0, 70)}...`,
+      category: 'note',
+      filterCategory: 'notes',
+      targetTab: 'flashcards',
+      badge: 'Flashcard',
+      description: `${card.category} — Answer: ${card.answer}`,
+      contentSnippet: card.codeSnippet || card.explanation || card.answer,
+      tags: ['flashcard', 'study', 'card', card.domainId, ...(card.tags || [])],
+      copyable: card.codeSnippet,
     });
   });
 
