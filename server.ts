@@ -1,8 +1,9 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
+import { getFallbackScenariosForTopic } from './src/data/scenarioFallbacks';
 
 dotenv.config();
 
@@ -238,6 +239,136 @@ app.post('/api/generate-mnemonic-image', async (req, res) => {
     res.status(500).json({ 
       error: 'Failed to generate visual aid',
       details: (error as Error).message
+    });
+  }
+});
+
+/**
+ * Endpoint: POST /api/generate-scenario-questions
+ * Uses Gemini (gemini-3.8-flash) to generate complex, scenario-based practice questions
+ * tailored to the current flashcard deck's topic and concepts.
+ */
+app.post('/api/generate-scenario-questions', async (req, res) => {
+  try {
+    const { 
+      domainId = 'all', 
+      categoryName = 'General CEH Exam Topics', 
+      count = 3, 
+      difficulty = 'standard', 
+      customFocus = '', 
+      sampleDeckCards = [] 
+    } = req.body || {};
+    
+    const requestedCount = Math.min(Math.max(Number(count) || 3, 1), 6);
+    const ai = getAIClient();
+
+    if (!ai) {
+      // Return curated fallback questions when GEMINI_API_KEY is not configured
+      const fallbacks = getFallbackScenariosForTopic(domainId, categoryName, requestedCount);
+      return res.json({
+        success: true,
+        questions: fallbacks,
+        model: 'curated-ceh-scenario-bank',
+        isSimulated: true,
+        topic: categoryName,
+        note: 'Generated from CEH v13 vetted scenario blueprint bank (connect GEMINI_API_KEY in Settings for dynamic AI variations).'
+      });
+    }
+
+    const cardsContext = Array.isArray(sampleDeckCards) && sampleDeckCards.length > 0
+      ? `Recent flashcard questions in this active deck include: ${sampleDeckCards.slice(0, 5).map((c: any) => c.question || c).join(' | ')}.`
+      : '';
+
+    const prompt = `Generate exactly ${requestedCount} unique, complex, scenario-based cybersecurity examination practice questions for candidates preparing for the Certified Ethical Hacker (CEH v13) certification.
+
+Topic / Exam Domain: "${categoryName}" (Domain ID: "${domainId}").
+Difficulty Tier: ${difficulty === 'advanced' ? 'Advanced Enterprise Red Team / Multi-Stage Attack Simulation' : 'Standard CEH Practical / Scenario Exam Depth'}.
+${customFocus ? `Candidate Focus Request: "${customFocus}".` : ''}
+${cardsContext}
+
+EACH QUESTION MUST ADHERE TO THESE STRICT CRITERIA:
+1. "scenario": A rich, 2 to 4 sentence realistic enterprise environment, penetration testing engagement, incident response ticket, SIEM log alert, network packet capture snippet, or tool execution scenario.
+2. "question": A precise, critical-thinking question requiring the candidate to analyze the scenario and select the optimal command, flag, exploit technique, forensic root cause, or remediation strategy.
+3. "options": An array of exactly 4 distinct, plausible options (one unquestionably correct answer and three realistic distractors).
+4. "correctIndex": An integer (0, 1, 2, or 3) representing the zero-based index of the correct option.
+5. "explanation": A detailed, technical breakdown explaining WHY the chosen option is correct and why the other options are either incorrect, noisy, or insecure.
+6. "keyTakeaway": A concise one-sentence core rule of thumb for the CEH exam.
+7. "mitreTechnique": The relevant MITRE ATT&CK technique ID and name (e.g. "T1046: Network Service Discovery" or "T1190: Exploit Public-Facing Application").
+8. "suggestedFlashcardAnswer": A concise 1-2 sentence summary of the scenario and solution, ideal for front-to-back flashcard memorization.
+9. "domainId": "${domainId}".
+10. "category": "${categoryName}".`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: prompt,
+      config: {
+        systemInstruction: 'You are a senior offensive security architect and EC-Council certified instructor creating rigorous, scenario-based exam questions for CEH v13.',
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              domainId: { type: Type.STRING },
+              category: { type: Type.STRING },
+              scenario: { type: Type.STRING },
+              question: { type: Type.STRING },
+              options: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
+              correctIndex: { type: Type.INTEGER },
+              explanation: { type: Type.STRING },
+              keyTakeaway: { type: Type.STRING },
+              mitreTechnique: { type: Type.STRING },
+              suggestedFlashcardAnswer: { type: Type.STRING }
+            },
+            required: ['id', 'scenario', 'question', 'options', 'correctIndex', 'explanation', 'keyTakeaway', 'suggestedFlashcardAnswer']
+          }
+        }
+      }
+    });
+
+    let questions: any[] = [];
+    try {
+      const responseText = response.text || '[]';
+      questions = JSON.parse(responseText);
+    } catch (parseErr) {
+      console.warn('Failed to parse Gemini JSON response, falling back:', parseErr);
+      questions = getFallbackScenariosForTopic(domainId, categoryName, requestedCount);
+    }
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+      questions = getFallbackScenariosForTopic(domainId, categoryName, requestedCount);
+    } else {
+      questions = questions.map((q: any, idx: number) => ({
+        ...q,
+        id: q.id || `gemini-sc-${Date.now()}-${idx}`,
+        domainId: q.domainId || domainId,
+        category: q.category || categoryName,
+        difficulty: difficulty === 'advanced' ? 'Advanced Red Team' : 'Standard CEH'
+      }));
+    }
+
+    return res.json({
+      success: true,
+      questions,
+      model: 'gemini-3.8-flash',
+      topic: categoryName,
+      difficulty
+    });
+  } catch (error) {
+    console.error('Scenario question generation error:', error);
+    const { domainId = 'all', categoryName = 'General CEH Exam Topics', count = 3 } = req.body || {};
+    const fallbackQuestions = getFallbackScenariosForTopic(domainId, categoryName, Number(count) || 3);
+    return res.json({
+      success: true,
+      questions: fallbackQuestions,
+      model: 'curated-ceh-scenario-bank',
+      isSimulated: true,
+      topic: categoryName,
+      note: 'Returned high-yield CEH scenario bank (AI model encountered temporary error).'
     });
   }
 });

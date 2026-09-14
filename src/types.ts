@@ -1,4 +1,25 @@
-export type ExamTab = 'written' | 'practical' | 'progress' | 'darkweb' | 'tools' | 'methodology' | 'tests' | 'installation' | 'flashcards';
+export type ExamTab = 'written' | 'practical' | 'progress' | 'darkweb' | 'tools' | 'methodology' | 'tests' | 'installation' | 'flashcards' | 'bookmarks';
+
+export interface StudyBookmark {
+  id: string; // unique ID e.g. "note-mr-infect" or "cmd-nmap-recon"
+  type: 'note' | 'cheatsheet' | 'command' | 'lab' | 'pillar';
+  title: string;
+  category: string; // e.g. "Written Notes", "Cheat Sheet Snippet", "4 Practical Pillars", "Lab Environment", "Essential Command"
+  sourceTab: ExamTab;
+  sourceSubTab?: string;
+  targetId?: string; // e.g. "mr-infect", "pillar-1", "cisco-packet-tracer", "repo-1"
+  description?: string;
+  content?: string; // command or code snippet or notes
+  notes?: string;
+  tags?: string[];
+  createdAt: string;
+}
+
+export interface AudioSettingsState {
+  master: boolean;
+  completion: boolean;
+  timerAlerts: boolean;
+}
 
 export interface DomainTaskItem {
   id: string;
@@ -224,6 +245,22 @@ export interface Flashcard {
   lastReviewedAt?: string;
   createdAt: string;
   isCustom?: boolean;
+}
+
+export interface ScenarioPracticeQuestion {
+  id: string;
+  domainId: string;
+  category: string;
+  scenario: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  keyTakeaway: string;
+  mitreTechnique?: string;
+  suggestedFlashcardAnswer?: string;
+  difficulty?: 'Standard CEH' | 'Advanced Red Team';
+  userSelectedOption?: number;
 }
 
 

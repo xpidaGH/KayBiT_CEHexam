@@ -22,10 +22,15 @@ import {
 } from 'lucide-react';
 import { PRACTICAL_PILLARS, BIG_THREE_REPOSITORIES } from '../data/cehPracticalData';
 import { PracticalPillar } from '../types';
+import { TERMINAL_THEMES, DEFAULT_TERMINAL_THEME, TerminalTheme } from '../data/terminalThemes';
+import { TerminalThemeSelector } from './TerminalThemeSelector';
+import { STORAGE_KEYS } from '../data/appConfig';
 
 interface PracticalZenModeProps {
   onExitZenMode: () => void;
   initialPillarId?: string;
+  terminalTheme?: TerminalTheme;
+  onSelectTerminalTheme?: (theme: TerminalTheme) => void;
 }
 
 interface TerminalLog {
@@ -38,7 +43,36 @@ interface TerminalLog {
 export const PracticalZenMode: React.FC<PracticalZenModeProps> = ({
   onExitZenMode,
   initialPillarId = PRACTICAL_PILLARS[0].id,
+  terminalTheme: propTheme,
+  onSelectTerminalTheme,
 }) => {
+  // Terminal theme state
+  const [internalTheme, setInternalTheme] = useState<TerminalTheme>(() => {
+    if (propTheme) return propTheme;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.TERMINAL_THEME);
+      if (saved) {
+        const found = TERMINAL_THEMES.find((t) => t.id === saved);
+        if (found) return found;
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_TERMINAL_THEME;
+  });
+
+  const activeTerminalTheme = propTheme || internalTheme;
+
+  const handleThemeChange = (theme: TerminalTheme) => {
+    setInternalTheme(theme);
+    onSelectTerminalTheme?.(theme);
+    try {
+      localStorage.setItem(STORAGE_KEYS.TERMINAL_THEME, theme.id);
+    } catch {
+      // ignore
+    }
+  };
+
   // Active pillar state
   const [selectedPillarId, setSelectedPillarId] = useState<string>(initialPillarId);
   const currentPillar = PRACTICAL_PILLARS.find((p) => p.id === selectedPillarId) || PRACTICAL_PILLARS[0];
@@ -457,9 +491,21 @@ export const PracticalZenMode: React.FC<PracticalZenModeProps> = ({
         </div>
 
         {/* RIGHT PANE: Dedicated Command Terminal Simulator (7 Cols) */}
-        <div className="lg:col-span-7 flex flex-col rounded-xl bg-slate-950 border border-slate-800 overflow-hidden shadow-2xl h-[calc(100vh-5rem)]">
+        <div 
+          className="lg:col-span-7 flex flex-col rounded-xl border overflow-hidden shadow-2xl h-[calc(100vh-5rem)] transition-colors"
+          style={{
+            backgroundColor: activeTerminalTheme.bg,
+            borderColor: activeTerminalTheme.border,
+          }}
+        >
           {/* Terminal Window Chrome */}
-          <div className="flex items-center justify-between px-3 py-2 bg-slate-900 border-b border-slate-800 select-none">
+          <div 
+            className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b select-none transition-colors"
+            style={{
+              backgroundColor: activeTerminalTheme.bg,
+              borderColor: activeTerminalTheme.border,
+            }}
+          >
             <div className="flex items-center gap-2">
               {/* macOS / Linux style dots */}
               <div className="flex items-center gap-1.5">
@@ -467,21 +513,38 @@ export const PracticalZenMode: React.FC<PracticalZenModeProps> = ({
                 <span className="w-3 h-3 rounded-full bg-amber-500/80"></span>
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80"></span>
               </div>
-              <span className="text-xs font-mono text-slate-400 ml-2">
+              <span 
+                className="text-xs font-mono ml-2 hidden sm:inline"
+                style={{ color: activeTerminalTheme.comment }}
+              >
                 kali@ceh-practical:~ (bash)
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span>TTY1 • 192.168.1.105</span>
+            <div className="flex items-center gap-2 text-[11px] font-mono">
+              {/* Terminal Color Scheme Selector */}
+              <TerminalThemeSelector
+                currentThemeId={activeTerminalTheme.id}
+                onSelectTheme={handleThemeChange}
+              />
+
+              <span className="hidden md:flex items-center gap-1.5 text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>TTY1 • 192.168.1.105</span>
+              </span>
+
               <button
                 type="button"
                 onClick={() => {
                   const fullText = terminalLogs.map((l) => `${l.command ? `$ ${l.command}\n` : ''}${l.output}`).join('\n\n');
                   handleCopy(fullText);
                 }}
-                className="hover:text-white px-1.5 py-0.5 rounded bg-slate-800/60 border border-slate-700/60 text-[10px] ml-2"
+                className="hover:text-white px-1.5 py-0.5 rounded text-[10px] border transition-colors"
+                style={{
+                  backgroundColor: activeTerminalTheme.surface,
+                  borderColor: activeTerminalTheme.border,
+                  color: activeTerminalTheme.comment,
+                }}
                 title="Copy full terminal session text"
               >
                 Copy Output
@@ -490,25 +553,38 @@ export const PracticalZenMode: React.FC<PracticalZenModeProps> = ({
           </div>
 
           {/* Terminal Output Log Area */}
-          <div className="flex-1 p-3.5 overflow-y-auto font-mono text-xs text-slate-300 space-y-3 selection:bg-emerald-500 selection:text-slate-950 leading-relaxed">
+          <div 
+            className="flex-1 p-3.5 overflow-y-auto font-mono text-xs space-y-3 leading-relaxed transition-colors"
+            style={{
+              backgroundColor: activeTerminalTheme.surface,
+              color: activeTerminalTheme.text,
+            }}
+          >
             {terminalLogs.map((log) => (
               <div key={log.id} className="space-y-1">
                 {log.command && (
-                  <div className="flex items-center gap-2 text-emerald-400 font-bold">
-                    <span className="text-slate-500 select-none">kali@ceh-lab:~$</span>
-                    <span>{log.command}</span>
+                  <div className="flex items-center gap-2 font-bold">
+                    <span 
+                      className="select-none text-xs"
+                      style={{ color: activeTerminalTheme.comment }}
+                    >
+                      kali@ceh-lab:~$
+                    </span>
+                    <span style={{ color: activeTerminalTheme.accent }}>{log.command}</span>
                   </div>
                 )}
                 <pre
-                  className={`whitespace-pre-wrap font-mono text-xs leading-relaxed ${
-                    log.type === 'system'
-                      ? 'text-teal-300'
-                      : log.type === 'success'
-                      ? 'text-emerald-300'
-                      : log.type === 'error'
-                      ? 'text-rose-400'
-                      : 'text-slate-300'
-                  }`}
+                  className="whitespace-pre-wrap font-mono text-xs leading-relaxed"
+                  style={{
+                    color:
+                      log.type === 'system'
+                        ? activeTerminalTheme.cyan
+                        : log.type === 'success'
+                        ? activeTerminalTheme.prompt
+                        : log.type === 'error'
+                        ? activeTerminalTheme.red
+                        : activeTerminalTheme.text,
+                  }}
                 >
                   {log.output}
                 </pre>
@@ -518,69 +594,123 @@ export const PracticalZenMode: React.FC<PracticalZenModeProps> = ({
           </div>
 
           {/* Quick Terminal Command Chips */}
-          <div className="px-3 py-1.5 bg-slate-900/90 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto text-[11px] font-mono scrollbar-none">
-            <span className="text-slate-500 text-[10px] uppercase font-bold shrink-0">Quick Presets:</span>
+          <div 
+            className="px-3 py-1.5 border-t flex items-center gap-1.5 overflow-x-auto text-[11px] font-mono scrollbar-none transition-colors"
+            style={{
+              backgroundColor: activeTerminalTheme.bg,
+              borderColor: activeTerminalTheme.border,
+            }}
+          >
+            <span className="text-[10px] uppercase font-bold shrink-0" style={{ color: activeTerminalTheme.comment }}>Presets:</span>
             <button
               type="button"
               onClick={() => executeCommand(`nmap -sS -sV ${currentPillar.scenarioWalkthrough.target}`)}
-              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 shrink-0 transition-colors"
+              className="px-2 py-0.5 rounded border shrink-0 transition-colors"
+              style={{
+                backgroundColor: activeTerminalTheme.surface,
+                borderColor: activeTerminalTheme.border,
+                color: activeTerminalTheme.prompt,
+              }}
             >
               $ nmap -sS
             </button>
             <button
               type="button"
               onClick={() => executeCommand('nmap -sn 192.168.1.0/24')}
-              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 shrink-0 transition-colors"
+              className="px-2 py-0.5 rounded border shrink-0 transition-colors"
+              style={{
+                backgroundColor: activeTerminalTheme.surface,
+                borderColor: activeTerminalTheme.border,
+                color: activeTerminalTheme.cyan,
+              }}
             >
               $ nmap sweep
             </button>
             <button
               type="button"
               onClick={() => executeCommand(`sqlmap -u "http://${currentPillar.scenarioWalkthrough.target}/index.php?id=1" --dbs`)}
-              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 shrink-0 transition-colors"
+              className="px-2 py-0.5 rounded border shrink-0 transition-colors"
+              style={{
+                backgroundColor: activeTerminalTheme.surface,
+                borderColor: activeTerminalTheme.border,
+                color: activeTerminalTheme.yellow,
+              }}
             >
               $ sqlmap --dbs
             </button>
             <button
               type="button"
               onClick={() => executeCommand(`hydra -l admin -P /usr/share/wordlists/rockyou.txt ssh://${currentPillar.scenarioWalkthrough.target}`)}
-              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 shrink-0 transition-colors"
+              className="px-2 py-0.5 rounded border shrink-0 transition-colors"
+              style={{
+                backgroundColor: activeTerminalTheme.surface,
+                borderColor: activeTerminalTheme.border,
+                color: activeTerminalTheme.yellow,
+              }}
             >
               $ hydra ssh
             </button>
             <button
               type="button"
               onClick={() => executeCommand(`enum4linux -a ${currentPillar.scenarioWalkthrough.target}`)}
-              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-purple-300 border border-slate-700 shrink-0 transition-colors"
+              className="px-2 py-0.5 rounded border shrink-0 transition-colors"
+              style={{
+                backgroundColor: activeTerminalTheme.surface,
+                borderColor: activeTerminalTheme.border,
+                color: activeTerminalTheme.accent,
+              }}
             >
               $ enum4linux
             </button>
             <button
               type="button"
               onClick={() => executeCommand('steghide extract -sf suspicious_photo.jpg')}
-              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-rose-300 border border-slate-700 shrink-0 transition-colors"
+              className="px-2 py-0.5 rounded border shrink-0 transition-colors"
+              style={{
+                backgroundColor: activeTerminalTheme.surface,
+                borderColor: activeTerminalTheme.border,
+                color: activeTerminalTheme.red,
+              }}
             >
               $ steghide
             </button>
             <button
               type="button"
               onClick={() => executeCommand('clear')}
-              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 shrink-0 transition-colors ml-auto"
+              className="px-2 py-0.5 rounded border shrink-0 transition-colors ml-auto"
+              style={{
+                backgroundColor: activeTerminalTheme.surface,
+                borderColor: activeTerminalTheme.border,
+                color: activeTerminalTheme.comment,
+              }}
             >
               clear
             </button>
           </div>
 
           {/* Interactive Command Prompt Input Bar */}
-          <div className="p-2.5 bg-slate-900 border-t border-slate-800">
+          <div 
+            className="p-2.5 border-t transition-colors"
+            style={{
+              backgroundColor: activeTerminalTheme.bg,
+              borderColor: activeTerminalTheme.border,
+            }}
+          >
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 executeCommand(commandInput);
               }}
-              className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500"
+              className="flex items-center gap-2 border rounded-lg px-3 py-1.5 focus-within:ring-1 focus-within:ring-emerald-500 transition-colors"
+              style={{
+                backgroundColor: activeTerminalTheme.surface,
+                borderColor: activeTerminalTheme.border,
+              }}
             >
-              <span className="text-emerald-400 font-mono font-bold text-xs select-none">
+              <span 
+                className="font-mono font-bold text-xs select-none"
+                style={{ color: activeTerminalTheme.prompt }}
+              >
                 kali@ceh-lab:~$
               </span>
               <input
@@ -610,13 +740,15 @@ export const PracticalZenMode: React.FC<PracticalZenModeProps> = ({
                   }
                 }}
                 placeholder="Type command here (e.g. nmap -sS 192.168.1.15, sqlmap, help, clear)..."
-                className="flex-1 bg-transparent border-none text-xs text-emerald-300 font-mono placeholder-slate-600 focus:outline-none"
+                className="flex-1 bg-transparent border-none text-xs font-mono placeholder-slate-600 focus:outline-none"
+                style={{ color: activeTerminalTheme.accent }}
                 autoComplete="off"
                 spellCheck="false"
               />
               <button
                 type="submit"
-                className="text-slate-400 hover:text-emerald-400 p-1 transition-colors"
+                className="p-1 transition-colors hover:opacity-80"
+                style={{ color: activeTerminalTheme.prompt }}
                 title="Execute Command (Enter)"
               >
                 <CornerDownLeft className="w-3.5 h-3.5" />

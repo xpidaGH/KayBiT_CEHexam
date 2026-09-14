@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Terminal, 
   BookOpen, 
@@ -15,11 +15,18 @@ import {
   Layers,
   Keyboard,
   Moon,
-  Sun
+  Sun,
+  Maximize2,
+  Bookmark,
+  Volume2,
+  VolumeX,
+  Settings
 } from 'lucide-react';
 import { ExamTab } from '../types';
 import { SUPPORTED_LANGUAGES } from '../data/translations';
 import { NAV_ITEMS_CONFIG, APP_CONFIG } from '../data/appConfig';
+import { isAudioCuesEnabled, setAudioCuesEnabled } from '../utils/audioCues';
+import { getBookmarks } from '../utils/bookmarkManager';
 
 interface NavbarProps {
   activeTab: ExamTab;
@@ -31,6 +38,9 @@ interface NavbarProps {
   onOpenShortcuts?: () => void;
   theme?: 'midnight' | 'deep-slate';
   onToggleTheme?: () => void;
+  isFocusMode?: boolean;
+  onToggleFocusMode?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,7 +53,38 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenShortcuts,
   theme = 'midnight',
   onToggleTheme,
+  isFocusMode = false,
+  onToggleFocusMode,
+  onOpenSettings,
 }) => {
+  const [audioMuted, setAudioMuted] = useState<boolean>(() => !isAudioCuesEnabled());
+  const [bookmarkCount, setBookmarkCount] = useState<number>(() => getBookmarks().length);
+
+  useEffect(() => {
+    const handleAudioChange = () => {
+      setAudioMuted(!isAudioCuesEnabled());
+    };
+    const handleBookmarksChange = () => {
+      setBookmarkCount(getBookmarks().length);
+    };
+
+    window.addEventListener('audio-cues-toggle', handleAudioChange);
+    window.addEventListener('audio-settings-changed', handleAudioChange);
+    window.addEventListener('bookmarks-updated', handleBookmarksChange);
+
+    return () => {
+      window.removeEventListener('audio-cues-toggle', handleAudioChange);
+      window.removeEventListener('audio-settings-changed', handleAudioChange);
+      window.removeEventListener('bookmarks-updated', handleBookmarksChange);
+    };
+  }, []);
+
+  const handleToggleAudio = () => {
+    const nextState = !audioMuted;
+    setAudioMuted(nextState);
+    setAudioCuesEnabled(!nextState);
+  };
+
   const getNavIcon = (id: ExamTab) => {
     switch (id) {
       case 'written':
@@ -62,6 +103,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         return <Award className="w-4 h-4" />;
       case 'flashcards':
         return <Layers className="w-4 h-4" />;
+      case 'bookmarks':
+        return <Bookmark className="w-4 h-4" />;
       case 'installation':
         return <Download className="w-4 h-4" />;
       default:
@@ -99,6 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <nav className="hidden lg:flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800">
             {NAV_ITEMS_CONFIG.map((item) => {
               const isActive = activeTab === item.id;
+              const isBookmarks = item.id === 'bookmarks';
               return (
                 <button
                   key={item.id}
@@ -124,13 +168,63 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {item.badge}
                     </span>
                   )}
+                  {isBookmarks && bookmarkCount > 0 && !item.badge && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                        isActive
+                          ? 'bg-slate-950 text-emerald-300'
+                          : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      }`}
+                    >
+                      {bookmarkCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </nav>
 
-          {/* Right Action Controls: Search, Language dropdown & User Guide Modal button */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Right Action Controls: Focus Mode, Audio, Search, Language, Settings & Guide */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Focus Mode Toggle Button */}
+            {onToggleFocusMode && (
+              <button
+                id="btn-navbar-focus-mode"
+                onClick={onToggleFocusMode}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all group shadow-sm ${
+                  isFocusMode
+                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-bold'
+                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                }`}
+                title="Toggle Distraction-Free Focus Mode (Press F) - hides headers and footers across all views"
+              >
+                <Maximize2 className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Focus Mode</span>
+                <kbd className="hidden md:inline text-[9px] font-mono bg-slate-900/80 text-emerald-400 px-1 py-0.2 rounded border border-emerald-500/40">
+                  F
+                </kbd>
+              </button>
+            )}
+
+            {/* Quick Audio Mute / Unmute Button */}
+            <button
+              id="btn-navbar-audio-toggle"
+              onClick={handleToggleAudio}
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border text-xs font-medium transition-all group flex items-center gap-1.5 ${
+                audioMuted
+                  ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800'
+              }`}
+              title={audioMuted ? 'Procedural Sound Effects Muted (Click to Unmute)' : 'Sound Effects Active (Click to Mute)'}
+            >
+              {audioMuted ? (
+                <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+              ) : (
+                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+              )}
+              <span className="hidden xl:inline">{audioMuted ? 'Muted' : 'Sound'}</span>
+            </button>
+
             {/* Global Quick Search Button */}
             <button
               id="btn-global-search"
@@ -139,14 +233,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Global Search topics, commands, notes, and tools (Ctrl+K or ⌘K)"
             >
               <Search className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span className="hidden md:inline text-slate-300">Quick Search...</span>
+              <span className="hidden md:inline text-slate-300">Search</span>
               <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] bg-slate-800/90 text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 font-mono">
                 ⌘K
               </kbd>
             </button>
 
             {/* Language Selector Dropdown */}
-            <div className="relative flex items-center">
+            <div className="relative hidden sm:flex items-center">
               <label htmlFor="language-select" className="sr-only">Select Language</label>
               <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:border-slate-700 transition-colors">
                 <Globe className="w-3.5 h-3.5 text-emerald-400" />
@@ -158,12 +252,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   {SUPPORTED_LANGUAGES.map((lang) => (
                     <option key={lang.code} value={lang.code} className="bg-slate-900 text-slate-200">
-                      {lang.name} ({lang.nativeName})
+                      {lang.name}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
+
+            {/* Settings Button */}
+            {onOpenSettings && (
+              <button
+                id="btn-navbar-settings"
+                onClick={onOpenSettings}
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium border border-slate-800 hover:border-slate-700 transition-all shadow-sm group"
+                title="Settings & Audio Controls"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-400 group-hover:rotate-45 transition-all" />
+                <span className="hidden xl:inline">Settings</span>
+              </button>
+            )}
 
             {/* User Guide Button */}
             <button
@@ -173,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Open the comprehensive student & educator user guide"
             >
               <FileText className="w-3.5 h-3.5 text-teal-400" />
-              <span className="hidden sm:inline">User Guide</span>
+              <span className="hidden sm:inline">Guide</span>
             </button>
 
             {/* Theme Toggle Button (Midnight vs Deep Slate) */}
@@ -195,7 +302,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Sun className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
                 )}
                 <span className="hidden xl:inline text-slate-300">
-                  {theme === 'midnight' ? 'Midnight' : 'Deep Slate'}
+                  {theme === 'midnight' ? 'Midnight' : 'Slate'}
                 </span>
               </button>
             )}
@@ -209,7 +316,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Keyboard Shortcuts & Navigation (Shift+/ or ?)"
               >
                 <Keyboard className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-                <span className="hidden xl:inline text-slate-300">Shortcuts</span>
                 <kbd className="hidden sm:inline-flex items-center text-[10px] bg-slate-800/90 text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 font-mono">
                   ?
                 </kbd>
@@ -220,6 +326,38 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile Navigation Scrollbar */}
         <div className="lg:hidden flex items-center gap-2 overflow-x-auto py-2 border-t border-slate-800/60 no-scrollbar">
+          {onToggleFocusMode && (
+            <button
+              id="btn-mobile-focus-mode"
+              onClick={onToggleFocusMode}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs whitespace-nowrap font-medium border ${
+                isFocusMode
+                  ? 'bg-emerald-500 text-slate-950 font-bold border-emerald-400'
+                  : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+              }`}
+            >
+              <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Focus Mode</span>
+            </button>
+          )}
+          <button
+            id="btn-mobile-audio-toggle"
+            onClick={handleToggleAudio}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 font-medium"
+          >
+            {audioMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
+            <span>{audioMuted ? 'Unmute' : 'Mute'}</span>
+          </button>
+          {onOpenSettings && (
+            <button
+              id="btn-mobile-settings"
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 font-medium"
+            >
+              <Settings className="w-3.5 h-3.5 text-slate-300" />
+              <span>Settings</span>
+            </button>
+          )}
           <button
             id="btn-mobile-search"
             onClick={onOpenGlobalSearch}

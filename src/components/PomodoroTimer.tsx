@@ -11,6 +11,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { STORAGE_KEYS } from '../data/appConfig';
+import { playTimerCompleteSound, isAudioCuesEnabled, setAudioCuesEnabled } from '../utils/audioCues';
 
 type PomodoroMode = 'focus' | 'short-break' | 'long-break';
 
@@ -64,7 +65,7 @@ export const PomodoroTimer: React.FC = () => {
   const [mode, setMode] = useState<PomodoroMode>('focus');
   const [timeLeft, setTimeLeft] = useState<number>(25 * 60);
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isAudioCuesEnabled());
   const [completedSessions, setCompletedSessions] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.POMODORO_SETTINGS);
@@ -80,6 +81,21 @@ export const PomodoroTimer: React.FC = () => {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Synchronize soundEnabled with global audio cues events
+  useEffect(() => {
+    const handleAudioToggle = (e: CustomEvent<{ enabled: boolean }>) => {
+      setSoundEnabled(e.detail.enabled);
+    };
+    window.addEventListener('audio-cues-toggle' as any, handleAudioToggle);
+    return () => window.removeEventListener('audio-cues-toggle' as any, handleAudioToggle);
+  }, []);
+
+  const handleToggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    setAudioCuesEnabled(next);
+  };
 
   // Sync session counter to localStorage
   useEffect(() => {
@@ -117,7 +133,7 @@ export const PomodoroTimer: React.FC = () => {
     } else if (timeLeft === 0 && isRunning) {
       setIsRunning(false);
       if (soundEnabled) {
-        playChime();
+        playTimerCompleteSound();
       }
 
       if (mode === 'focus') {
@@ -261,7 +277,7 @@ export const PomodoroTimer: React.FC = () => {
         <button
           id="btn-toggle-pomodoro-sound"
           type="button"
-          onClick={() => setSoundEnabled(prev => !prev)}
+          onClick={handleToggleSound}
           className={`p-1 rounded-md hover:bg-slate-800 transition-colors ${
             soundEnabled ? 'text-amber-400 hover:text-amber-300' : 'text-slate-500 hover:text-slate-400'
           }`}

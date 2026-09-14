@@ -92,6 +92,55 @@ export const USER_GUIDE_TRANSLATIONS: Record<string, UserGuideContent> = {
         id: 'tools-guide',
         heading: '5. EC-Council Exam Environment Tools Checklist',
         content: 'Audit and pre-install the exact GUI and CLI tools available in the official EC-Council exam machine. Filter by category, track your installation progress, and generate unified `apt-get` installation scripts.'
+      },
+      {
+        id: 'flashcards-ai-lab',
+        heading: '6. Spaced-Repetition Flashcards & Gemini AI Scenario Lab',
+        content: 'Master high-yield concepts across all 9 CEH domains with interactive spaced-repetition flashcards, generative mnemonic visual anchors, and AI-powered scenario question generation.',
+        bulletPoints: [
+          'Domain Decks: Spaced-repetition card decks with mastery tracking, audio pronunciation via Web Speech TTS, and instant keyboard shortcuts.',
+          'Mnemonic Visual Anchors: Associative generative imagery to facilitate photographic recall for complex protocols and memory exploits.',
+          'Gemini AI Scenario Generator: Synthesize real-world multi-stage scenarios tailored to the active deck topic with instant multiple-choice drills, detailed remediation explanations, and MITRE ATT&CK mappings.',
+          'Custom Deck Conversion: Instantly save generated scenarios directly into your study deck with persistent local storage.'
+        ]
+      },
+      {
+        id: 'cli-simulator',
+        heading: '7. In-Browser Kali Linux CLI Simulation & Audio Cues',
+        content: 'Practice typing and executing authentic security commands directly within the browser without requiring a virtual machine.',
+        bulletPoints: [
+          'Simulated CLI Terminal: Authentic prompt supporting 25+ real security tools (nmap, hydra, sqlmap, john, steghide, aircrack-ng, enum4linux, etc.) with command history and customizable color themes.',
+          'Test in CLI Integration: Launch pre-configured exam commands directly from the tools checklist into the terminal simulator.',
+          'Synthetic Audio Feedback: Web Audio API chimes for flashcard mastery, deck completion fanfares, and Pomodoro study timer alerts (globally toggleable).'
+        ]
+      },
+      {
+        id: 'performance-analytics',
+        heading: '8. Visual Performance Analytics & Historical Tracking',
+        content: 'Track exam readiness and score progression over time with interactive Recharts visualizations.',
+        bulletPoints: [
+          'Historical Score Trend: Interactive area chart visualizing test score percentages across sequential practice sessions against the 70% passing threshold.',
+          'Domain Breakdown: Identify high-performing domains (≥80%) and pinpoint vulnerable areas requiring extra scenario practice.'
+        ]
+      },
+      {
+        id: 'darkweb-blueprint',
+        heading: '9. Dark Web & Onion Routing Blueprint',
+        content: 'Explore the architectural differences between Surface Web (4%), Deep Web (90%), and Dark Web (6%).',
+        bulletPoints: [
+          '7-Step Circuit Visualizer: Interactive step-by-step breakdown of Tor multi-hop circuit establishment, layered AES encryption, and onion peeling.',
+          'Defensive Intelligence: Practical guidance and automation scripts for conducting safe threat intelligence and `.onion` security investigations.'
+        ]
+      },
+      {
+        id: 'focus-audio-bookmarks',
+        heading: '10. Global Focus Mode, Granular Audio Controls & My Bookmarks',
+        content: 'Enhance productivity during marathon study sessions with distraction-free viewing, custom audio notification preferences, and persistent content bookmarking.',
+        bulletPoints: [
+          'Global Focus Mode: Toggle via the navbar button or press "F" anywhere in the app to hide distraction elements across all views. Features a built-in stopwatch, quick tab switcher, and zero-clutter reading.',
+          'Granular Audio Controls: Independently configure or mute master sound effects, successful completion cues (flashcard answers, flag captures, domain fanfares), and timer alerts via the Settings menu.',
+          'My Bookmarks Hub: Bookmark any lab environment, GitHub text note, Big Three cheat sheet, or essential terminal command. Search, filter by category, run commands directly in the CLI simulator, and export bookmarks as Markdown or JSON.'
+        ]
       }
     ]
   },

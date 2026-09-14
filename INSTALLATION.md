@@ -1,59 +1,185 @@
-# KayBiT_CEHexam: Cross-Platform Native Packaging & Distribution Guide
+# KayBiT_CEHexam: Full-Stack Installation, Packaging & Distribution Guide
 
-This guide provides instructors and developers with the complete, step-by-step roadmap to package and distribute **KayBiT_CEHexam** natively across:
-- **Android**: Standalone APK and Google Play Store AAB
-- **iOS**: Native IPA package via Xcode or Installable PWA with offline caching
-- **Windows**: Lightweight native `.exe` installer and `.msi` package
-- **macOS**: Universal Apple Silicon / Intel `.dmg` disk image and `.app` bundle
-- **Web / Progressive Web App (PWA)**: Instant zero-install browser experience with offline support
-
----
-
-## 1. Tooling Selection
-
-For modern React + Vite + TypeScript web applications, choose tools that maximize performance, minimize bundle bloat, and maintain a single shared codebase:
-
-| Target Platform | Recommended Modern Tool | Alternative | Why It's Recommended |
-|---|---|---|---|
-| **Android & iOS** | **Capacitor 6+** (`@capacitor/core`) | Cordova (Legacy) | Official modern successor to Cordova. Uses native modern webviews (Android WebView & WKWebView), zero plugin overhead, full TypeScript support, direct access to native APIs. |
-| **Desktop (Windows & macOS)** | **Tauri 2+** | Electron | Tauri compiles a tiny Rust binary wrapper around the system webview (WebView2 on Windows, WebKit on macOS). Bundle size is **~8 MB** compared to Electron's **120+ MB**, uses **~30 MB RAM** instead of 250 MB+, and boots instantly. |
-| **Universal / Browser** | **Progressive Web App (PWA)** | Standard Webpage | Uses Service Workers and `manifest.webmanifest`. Enables "Install to Desktop / Home Screen" button in Chrome, Edge, and Safari without submitting to app stores. |
+This comprehensive guide details the installation, server configuration, containerization, and native cross-platform packaging for **KayBiT_CEHexam**:
+- **Full-Stack Web & Container**: Node.js, Express, Vite, `@google/genai`, Docker, Google Cloud Run
+- **Android**: Standalone APK and Google Play Store AAB via Capacitor
+- **iOS**: Native IPA package via Xcode / Capacitor, or installable PWA
+- **Windows**: Lightweight native `.exe` installer and `.msi` package via Tauri
+- **macOS**: Universal Apple Silicon / Intel `.dmg` disk image via Tauri
+- **Progressive Web App (PWA)**: Zero-install browser experience with offline caching
 
 ---
 
-## 2. Project Restructuring for Native Wrappers
+## 1. Environment & Architecture Overview
 
-To ensure seamless compilation across native shells, make sure your React/Vite codebase adheres to these principles:
+KayBiT_CEHexam uses a full-stack architecture combining a high-performance Express backend with a modern React 19 + TypeScript + Vite frontend.
 
-### A. Relative Asset Base Path
-In `vite.config.ts`, ensure `base` is configured relatively so native webviews reading from `file://` or `tauri://` can resolve assets:
-```typescript
-// vite.config.ts
-export default defineConfig({
-  base: './', // CRITICAL: Ensures assets load properly inside Capacitor & Tauri local schemes
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-  }
-});
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    KayBiT_CEHexam Client                    │
+│   React 19 + TypeScript + Tailwind CSS v4 + Motion + Recharts│
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+               API Requests: /api/* (Port 3000)
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│                    Express Backend Server                   │
+│          server.ts -> compiled to dist/server.cjs           │
+│                                                             │
+│   • POST /api/generate-scenario-questions                   │
+│   • Google GenAI SDK (@google/genai) with gemini-3.8-flash  │
+│   • Curated High-Yield Offline Fallback Scenario Bank       │
+│   • Vite Middleware (Dev) / Static Asset Serving (Prod)    │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+               GEMINI_API_KEY (Server-Side Secret)
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│                    Google Gemini 3.8 API                    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### B. Client-Side Hash or Memory Routing
-Avoid server-dependent HTML5 pushState routing unless deep links are explicitly handled by native URL schemes. A hash-based or single-page state pattern (like the tab manager in `App.tsx`) works 100% offline out-of-the-box in all native containers.
-
-### C. Persistent Local Storage
-Use standard `window.localStorage` or `@capacitor/preferences` for persistence. In KayBiT_CEHexam, living command sheets, tools checklist states, and practice exam scores are stored in `localStorage`, guaranteeing zero cloud dependency when students are offline in air-gapped lab environments.
-
-### D. Offline-First PWA Manifest & Service Worker
-Place a `manifest.webmanifest` file in `/public/` and register a service worker in `index.html` to cache the app shell and scripts.
+### Key Architectural Safeguards
+1. **API Key Security**: The `GEMINI_API_KEY` is strictly managed server-side. It is **never** bundled into the client build or exposed in browser network requests.
+2. **Port Binding**: Both dev and production servers bind to `0.0.0.0:3000` for compatibility with reverse proxies and Cloud Run containers.
+3. **Resilient Offline Fallback**: If the server is offline or no Gemini API key is configured, the scenario lab automatically serves from a curated offline scenario bank across all 9 CEH domains.
+4. **Zero-Asset Audio & Offline Persistence**: All sound effects (completion cues, timer alerts) are procedurally generated using the native Web Audio API oscillators—no external sound files required. All study bookmarks (`kaybit_ceh_study_bookmarks`), audio preferences (`kaybit_ceh_audio_cues_enabled`, `kaybit_ceh_completion_cues_enabled`, `kaybit_ceh_timer_alerts_enabled`), and focus mode states (`kaybit_ceh_focus_mode`) are automatically persisted in client `localStorage` for complete offline functionality.
 
 ---
 
-## 3. Concrete Configuration Files
+## 2. Local Development Setup
 
-### A. Capacitor Configuration (`capacitor.config.ts`)
-Run `npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios` and create:
+### Prerequisites
+- Node.js 18.x or 20.x+
+- npm 9.x+ (or Bun / pnpm)
+- (Optional) Google AI Studio API Key for Gemini scenario generation
 
+### Step-by-Step Setup
+```bash
+# 1. Clone repository
+git clone https://github.com/your-username/kaybit-cehexam.git
+cd kaybit-cehexam
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure environment variables
+cp .env.example .env
+```
+
+Edit `.env` and configure your API key:
+```env
+# Server-side Gemini API key (optional - offline fallback will be used if omitted)
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+```bash
+# 4. Start development server
+npm run dev
+```
+The server will start at `http://localhost:3000`. In development mode, Express mounts Vite's middleware so changes are hot-reloaded automatically.
+
+---
+
+## 3. Production Build & Server Execution
+
+The production build pipeline compiles both the frontend React client and the backend TypeScript server into an optimized, self-contained bundle:
+
+```bash
+# Run the complete production build
+npm run build
+```
+
+This single command performs:
+1. `vite build`: Compiles the React SPA assets into `/dist`.
+2. `esbuild server.ts`: Bundles the Express server into a standalone CommonJS file at `dist/server.cjs` with sourcemaps and externalized npm modules.
+
+### Launching the Production Server:
+```bash
+# Start the production Node server
+npm run start
+# or: node dist/server.cjs
+```
+
+The production server serves the optimized static assets from `/dist` and exposes the `/api/*` endpoints on port 3000.
+
+---
+
+## 4. Docker & Cloud Container Deployment
+
+Deploying KayBiT_CEHexam to Google Cloud Run, AWS ECS, or any standard Docker host:
+
+### Production `Dockerfile`
+```dockerfile
+# Multi-stage Dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependency specifications
+COPY package*.json ./
+RUN npm ci
+
+# Copy source code and config
+COPY . .
+
+# Build client and server bundles
+RUN npm run build
+
+# Production runtime stage
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Install production dependencies only
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# Copy compiled outputs from builder
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 3000
+
+CMD ["node", "dist/server.cjs"]
+```
+
+### Building and Running the Container:
+```bash
+# Build Docker image
+docker build -t kaybit-cehexam:latest .
+
+# Run container locally on port 3000
+docker run -p 3000:3000 \
+  -e GEMINI_API_KEY="your_api_key_here" \
+  kaybit-cehexam:latest
+```
+
+---
+
+## 5. Cross-Platform Native Packaging
+
+For air-gapped lab computers, offline student laptops, or tablet deployments, KayBiT_CEHexam can be packaged natively:
+
+| Target Platform | Recommended Modern Tool | Distribution Format |
+|---|---|---|
+| **Android** | **Capacitor 6+** (`@capacitor/android`) | Standalone `.apk` & Play Store `.aab` |
+| **iOS** | **Capacitor 6+** (`@capacitor/ios`) | `.ipa` via Xcode or PWA home screen |
+| **Windows** | **Tauri 2+** | Standalone `.exe` installer & `.msi` |
+| **macOS** | **Tauri 2+** | Universal `.dmg` disk image & `.app` |
+| **Web Browser** | **Progressive Web App (PWA)** | Installable web app with service worker |
+
+---
+
+### A. Android & iOS Packaging (Capacitor)
+
+1. **Install Capacitor CLI and platforms**:
+```bash
+npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios
+```
+
+2. **Configuration (`capacitor.config.ts`)**:
 ```typescript
 import { CapacitorConfig } from '@capacitor/cli';
 
@@ -65,38 +191,41 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     cleartext: true
-  },
-  android: {
-    buildOptions: {
-      keystorePath: 'release-key.jks',
-      keystoreAlias: 'kaybit',
-    }
   }
 };
 
 export default config;
 ```
 
-#### Android Build Commands:
+3. **Build APK**:
 ```bash
-# 1. Build web distribution
+# Build production client
 npm run build
 
-# 2. Initialize Capacitor & sync assets
-npx cap init KayBiT_CEHexam com.kaybit.cehexam --web-dir dist
+# Initialize and sync Capacitor
 npx cap add android
 npx cap sync android
 
-# 3. Build signed release APK
+# Compile Android release APK
 cd android && ./gradlew assembleRelease
-# APK is generated at: android/app/build/outputs/apk/release/app-release.apk
+# Output: android/app/build/outputs/apk/release/app-release.apk
 ```
+
+*Note: In standalone mobile builds without a local Node server, the app automatically switches to its comprehensive built-in offline scenario bank for all domain practice questions.*
 
 ---
 
-### B. Tauri Desktop Configuration (`src-tauri/tauri.conf.json`)
-Run `npm install -D @tauri-apps/cli` and `npx tauri init`. Set `src-tauri/tauri.conf.json`:
+### B. Desktop Packaging: Windows & macOS (Tauri)
 
+Tauri generates ultra-compact native desktop executables (~8 MB vs Electron's 120+ MB):
+
+1. **Install Tauri CLI**:
+```bash
+npm install -D @tauri-apps/cli
+npx tauri init
+```
+
+2. **Configuration (`src-tauri/tauri.conf.json`)**:
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/tooling/cli/schema.json",
@@ -108,14 +237,9 @@ Run `npm install -D @tauri-apps/cli` and `npx tauri init`. Set `src-tauri/tauri.
   },
   "package": {
     "productName": "KayBiT_CEHexam",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "tauri": {
-    "allowlist": {
-      "all": false,
-      "fs": { "all": false },
-      "shell": { "open": true }
-    },
     "bundle": {
       "active": true,
       "targets": ["msi", "nsis", "dmg", "deb"],
@@ -123,7 +247,6 @@ Run `npm install -D @tauri-apps/cli` and `npx tauri init`. Set `src-tauri/tauri.
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
-        "icons/128x128@2x.png",
         "icons/icon.icns",
         "icons/icon.ico"
       ]
@@ -131,8 +254,8 @@ Run `npm install -D @tauri-apps/cli` and `npx tauri init`. Set `src-tauri/tauri.
     "windows": [
       {
         "title": "KayBiT_CEHexam - CEH Written & Practical Master Hub",
-        "width": 1280,
-        "height": 860,
+        "width": 1360,
+        "height": 900,
         "resizable": true,
         "fullscreen": false
       }
@@ -141,19 +264,20 @@ Run `npm install -D @tauri-apps/cli` and `npx tauri init`. Set `src-tauri/tauri.
 }
 ```
 
-#### Desktop Build Commands:
+3. **Build Desktop Installers**:
 ```bash
-# Compile native desktop installers
 npm run build
 npx tauri build
-# Outputs:
-# Windows: src-tauri/target/release/bundle/nsis/KayBiT_CEHexam_1.0.0_x64-setup.exe
-# macOS:   src-tauri/target/release/bundle/dmg/KayBiT_CEHexam_1.0.0_x64.dmg
 ```
+Outputs:
+- **Windows**: `src-tauri/target/release/bundle/nsis/KayBiT_CEHexam_1.1.0_x64-setup.exe`
+- **macOS**: `src-tauri/target/release/bundle/dmg/KayBiT_CEHexam_1.1.0_x64.dmg`
 
 ---
 
-### C. Web App Manifest (`public/manifest.webmanifest`)
+### C. Progressive Web App (PWA) Setup
+
+Add `public/manifest.webmanifest`:
 ```json
 {
   "name": "KayBiT_CEHexam",
@@ -165,12 +289,12 @@ npx tauri build
   "description": "All-in-one CEH Written & Practical Exam Preparation App for intermediate programmers.",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/assets/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/assets/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
@@ -178,14 +302,20 @@ npx tauri build
 }
 ```
 
+Link the manifest in `index.html`:
+```html
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#10b981">
+```
+
 ---
 
-## 4. Build Automation: GitHub Actions CI/CD Pipeline
+## 6. GitHub Actions Automated CI/CD Workflow
 
-Create `.github/workflows/release-builds.yml` in your repository. This workflow automatically produces all native binaries whenever you push a version tag (`git tag v1.0.0 && git push --tags`):
+Create `.github/workflows/build-artifacts.yml` to automatically build and release binaries on tag pushes (`git tag v1.1.0 && git push --tags`):
 
 ```yaml
-name: Build Cross-Platform Native Installers
+name: Cross-Platform Build Release
 
 on:
   push:
@@ -193,43 +323,36 @@ on:
       - 'v*'
 
 jobs:
-  # Build Android APK via Capacitor
   build-android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: 17
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
 
-      - name: Install dependencies & build web app
+      - name: Build Web & Sync Capacitor
         run: |
           npm ci
           npm run build
           npx cap sync android
 
-      - name: Build APK with Gradle
+      - name: Compile APK
         run: |
-          cd android
-          chmod +x gradlew
+          cd android && chmod +x gradlew
           ./gradlew assembleRelease
 
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: KayBiT_CEHexam-Android-APK
           path: android/app/build/outputs/apk/release/*.apk
 
-  # Build Windows .exe & macOS .dmg via Tauri
   build-desktop:
     strategy:
       fail-fast: false
@@ -242,62 +365,46 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-      - name: Install Rust Stable
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install dependencies
-        run: npm ci
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Build Tauri Package
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'KayBiT_CEHexam ${{ github.ref_name }}'
-          releaseBody: 'Automatic cross-platform release build.'
-          releaseDraft: false
-          prerelease: false
+        run: |
+          npm ci
+          npm run build
+          npx tauri build
 ```
 
 ---
 
-## 5. Hosting & Distribution Strategy for Educator Websites
+## 7. Educator Hosting & Direct Download Strategy
 
-When publishing direct download links on your educational website:
+Organize your institution's downloads directory as follows:
 
-### Directory Structure on S3 / CDN / Web Server:
 ```text
 https://your-domain.edu/downloads/cehexam/
 ├── latest/
 │   ├── KayBiT_CEHexam-Setup.exe       (Windows 64-bit installer)
 │   ├── KayBiT_CEHexam.dmg             (macOS Universal Disk Image)
 │   ├── KayBiT_CEHexam.apk             (Android Direct APK)
-│   └── version.json                   (Metadata for auto-updater)
-└── archives/
-    ├── v1.0.0/
-    └── v1.1.0/
+│   └── version.json                   (Release manifest)
 ```
 
-### Auto-Update / Version JSON (`version.json`):
+### Version Manifest (`version.json`):
 ```json
 {
-  "version": "1.0.0",
-  "releaseDate": "2026-09-10",
+  "version": "1.1.0",
+  "releaseDate": "2026-09-12",
   "minRequiredVersion": "1.0.0",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://your-domain.edu/downloads/cehexam/latest/KayBiT_CEHexam-Setup.exe",
-      "signature": "SHA256_HASH_HERE"
+      "url": "https://your-domain.edu/downloads/cehexam/latest/KayBiT_CEHexam-Setup.exe"
     },
     "darwin-universal": {
-      "url": "https://your-domain.edu/downloads/cehexam/latest/KayBiT_CEHexam.dmg",
-      "signature": "SHA256_HASH_HERE"
+      "url": "https://your-domain.edu/downloads/cehexam/latest/KayBiT_CEHexam.dmg"
     },
     "android-apk": {
       "url": "https://your-domain.edu/downloads/cehexam/latest/KayBiT_CEHexam.apk"
@@ -306,20 +413,4 @@ https://your-domain.edu/downloads/cehexam/
 }
 ```
 
-### Student Download Badges HTML Snippet:
-```html
-<div class="download-container" style="display:flex; gap:16px; flex-wrap:wrap;">
-  <a href="/downloads/cehexam/latest/KayBiT_CEHexam.apk" class="badge">
-    🤖 Download for Android (.APK)
-  </a>
-  <a href="/downloads/cehexam/latest/KayBiT_CEHexam-Setup.exe" class="badge">
-    🪟 Download for Windows (.EXE)
-  </a>
-  <a href="/downloads/cehexam/latest/KayBiT_CEHexam.dmg" class="badge">
-    🍎 Download for macOS (.DMG)
-  </a>
-  <a href="https://your-domain.edu/app" class="badge">
-    🌐 Launch Instant Web App (PWA)
-  </a>
-</div>
-```
+Students can easily verify file hashes and run the application natively in air-gapped classroom labs or remote study environments.

@@ -11,6 +11,7 @@ interface CircularProgressRingProps {
   sublabel?: string;
   className?: string;
   animated?: boolean;
+  glowOnMastery?: boolean;
 }
 
 export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
@@ -24,18 +25,23 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
   sublabel,
   className = '',
   animated = true,
+  glowOnMastery = true,
 }) => {
   const clampedPercent = Math.min(100, Math.max(0, Math.round(percentage)));
+  const isMastered = clampedPercent === 100;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (clampedPercent / 100) * circumference;
 
   // Generate unique gradient ID to avoid collisions
   const gradientId = `ring-grad-${color.replace('#', '')}-${size}-${strokeWidth}`;
+  const glowFilterId = `ring-glow-${color.replace('#', '')}-${size}`;
 
   return (
     <div
-      className={`relative inline-flex items-center justify-center select-none ${className}`}
+      className={`relative inline-flex items-center justify-center select-none transition-transform duration-500 ${
+        isMastered && glowOnMastery ? 'scale-105' : ''
+      } ${className}`}
       style={{ width: size, height: size }}
       role="progressbar"
       aria-valuenow={clampedPercent}
@@ -46,14 +52,37 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        className="transform -rotate-90"
+        className="transform -rotate-90 overflow-visible"
       >
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={color} stopOpacity="1" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.75" />
+            <stop offset="100%" stopColor={isMastered ? '#34d399' : color} stopOpacity="0.85" />
           </linearGradient>
+
+          {/* Glow filter for 100% mastery */}
+          <filter id={glowFilterId} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
+
+        {/* Ambient Subtle Glow Halo for 100% Mastery */}
+        {isMastered && glowOnMastery && (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth + 4}
+            fill="none"
+            opacity="0.25"
+            className="animate-pulse blur-[3px]"
+          />
+        )}
 
         {/* Background Track Circle */}
         <circle
@@ -77,7 +106,12 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
-          className={animated ? 'transition-all duration-700 ease-out' : ''}
+          filter={isMastered && glowOnMastery ? `url(#${glowFilterId})` : undefined}
+          className={
+            animated
+              ? 'transition-all duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)]'
+              : ''
+          }
         />
       </svg>
 

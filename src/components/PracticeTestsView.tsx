@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Clock, 
   Play, 
@@ -10,16 +10,58 @@ import {
   ShieldAlert, 
   Terminal, 
   ChevronRight, 
-  ChevronLeft,
-  Check,
-  BookOpen
+  ChevronLeft, 
+  Check, 
+  BookOpen,
+  Volume2,
+  VolumeX,
+  Target,
+  AlertTriangle,
+  Sparkles,
+  RefreshCw,
+  Award,
+  Zap
 } from 'lucide-react';
 import { PRACTICAL_PRACTICE_CHALLENGES, WRITTEN_PRACTICE_QUESTIONS } from '../data/cehPracticalData';
+import { EXAM_DOMAINS_PROGRESS } from '../data/progressData';
 import { PracticalChallenge, WrittenQuizQuestion } from '../types';
 import { APP_CONFIG, STORAGE_KEYS } from '../data/appConfig';
+import { PracticePerformanceChart } from './PracticePerformanceChart';
+import { 
+  playFlagCapturedSound, 
+  playTimerCompleteSound, 
+  playFlashcardSuccessSound, 
+  playDeckMasteredFanfare,
+  isAudioCuesEnabled, 
+  setAudioCuesEnabled 
+} from '../utils/audioCues';
+import { triggerAutoSaveToast } from '../utils/autoSaveEvent';
+
+export interface WeaknessTopicAnalysis {
+  domainNumber: number;
+  domainName: string;
+  blueprintWeight: number;
+  completionRate: number;
+  uncompletedCount: number;
+}
 
 export const PracticeTestsView: React.FC = () => {
-  const [examMode, setExamMode] = useState<'practical' | 'written'>('practical');
+  const [examMode, setExamMode] = useState<'practical' | 'written' | 'weakness'>('practical');
+  const [audioEnabled, setAudioEnabled] = useState<boolean>(() => isAudioCuesEnabled());
+
+  useEffect(() => {
+    const handleAudioToggle = (e: CustomEvent<{ enabled: boolean }>) => {
+      setAudioEnabled(e.detail.enabled);
+    };
+    window.addEventListener('audio-cues-toggle' as any, handleAudioToggle);
+    return () => window.removeEventListener('audio-cues-toggle' as any, handleAudioToggle);
+  }, []);
+
+  const handleToggleAudio = () => {
+    const next = !audioEnabled;
+    setAudioEnabled(next);
+    setAudioCuesEnabled(next);
+  };
 
   // --- PRACTICAL 20-CHALLENGE SIMULATOR STATE ---
   const [currentChallengeIdx, setCurrentChallengeIdx] = useState(0);
@@ -52,6 +94,11 @@ export const PracticeTestsView: React.FC = () => {
     if (isTimerRunning && secondsRemaining > 0) {
       interval = setInterval(() => {
         setSecondsRemaining((prev) => {
+          if (prev <= 1) {
+            playTimerCompleteSound();
+            setIsTimerRunning(false);
+            return 0;
+          }
           const next = prev - 1;
           localStorage.setItem(STORAGE_KEYS.PRACTICAL_TIMER, next.toString());
           return next;
@@ -84,6 +131,7 @@ export const PracticeTestsView: React.FC = () => {
         text: 'Correct Flag! Challenge solved (+1 Point)',
         success: true,
       });
+      playFlagCapturedSound();
     } else {
       setFeedbackMsg({
         id: challenge.id,
@@ -104,17 +152,201 @@ export const PracticeTestsView: React.FC = () => {
     if (writtenRevealed[qId]) return;
     setWrittenAnswers((prev) => ({ ...prev, [qId]: optIdx }));
     setWrittenRevealed((prev) => ({ ...prev, [qId]: true }));
+
+    const question = WRITTEN_PRACTICE_QUESTIONS.find((q) => q.id === qId);
+    if (question && question.correctIndex === optIdx) {
+      playFlashcardSuccessSound();
+    }
   };
 
   const writtenCorrectCount = WRITTEN_PRACTICE_QUESTIONS.filter(
     (q: WrittenQuizQuestion) => writtenAnswers[q.id] === q.correctIndex
   ).length;
 
+  // --- DYNAMIC WEAKNESS REVISION ENGINE ---
+  const [weaknessAnswers, setWeaknessAnswers] = useState<Record<string, number>>({});
+  const [weaknessRevealed, setWeaknessRevealed] = useState<Record<string, boolean>>({});
+  const [weaknessAnalysis, setWeaknessAnalysis] = useState<WeaknessTopicAnalysis[]>([]);
+  const [weaknessQuestions, setWeaknessQuestions] = useState<Array<{
+    id: string;
+    domainNumber: number;
+    domainName: string;
+    question: string;
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+    examTip: string;
+  }>>([]);
+
+  const analyzeAndGenerateWeaknessTest = () => {
+    try {
+      const savedTasks = localStorage.getItem(STORAGE_KEYS.DOMAIN_PROGRESS);
+      const completedTasks: Record<string, boolean> = savedTasks ? JSON.parse(savedTasks) : {};
+
+      // Analyze each domain from the official CEH Blueprint
+      const analyzed: WeaknessTopicAnalysis[] = EXAM_DOMAINS_PROGRESS.map((domain) => {
+        const total = domain.tasks.length;
+        const completed = domain.tasks.filter((t) => completedTasks[t.id]).length;
+        const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+        return {
+          domainNumber: domain.domainNumber,
+          domainName: domain.name,
+          blueprintWeight: domain.blueprintWeight,
+          completionRate: rate,
+          uncompletedCount: total - completed,
+        };
+      });
+
+      // Sort by lowest completion rate first, then by blueprint weight descending (high weight + low score = most critical)
+      analyzed.sort((a, b) => {
+        if (a.completionRate !== b.completionRate) {
+          return a.completionRate - b.completionRate;
+        }
+        return b.blueprintWeight - a.blueprintWeight;
+      });
+
+      setWeaknessAnalysis(analyzed);
+
+      // Target the lowest 3 domains
+      const targetDomains = analyzed.slice(0, 3);
+      const targetDomainNumbers = new Set(targetDomains.map((d) => d.domainNumber));
+
+      // Curated bank for weak domain revision
+      const WEAKNESS_QUESTION_BANK = [
+        {
+          id: 'w-d4-1',
+          domainNumber: 4,
+          domainName: 'Domain 4: System Hacking & Malware Threats',
+          question: 'An attacker gains initial shell access on a Linux server and wants to search for SUID binaries owned by root. Which command accomplishes this without generating permission noise?',
+          options: [
+            'find / -perm -4000 -user root -type f 2>/dev/null',
+            'ls -laR /etc/sudoers 2>/dev/null',
+            'grep -rnw "root" /var/log/ 2>/dev/null',
+            'chmod +s /bin/bash /usr/bin/python3'
+          ],
+          correctIndex: 0,
+          explanation: '`find / -perm -4000 -user root -type f 2>/dev/null` specifically searches the entire filesystem for files with the 4000 (SUID) permission bit set owned by root, redirecting stderr to null.',
+          examTip: 'High-frequency CEH Practical question. Know how to leverage SUID binaries on GTFOBins.'
+        },
+        {
+          id: 'w-d6-1',
+          domainNumber: 6,
+          domainName: 'Domain 6: Web Application Hacking',
+          question: 'During a web application security review, you notice the endpoint `https://target.com/profile?redirect=http://attacker.com/steal` accepts arbitrary external URLs and redirects the browser. What vulnerability is this?',
+          options: [
+            'Server-Side Request Forgery (SSRF)',
+            'Unvalidated Redirects and Forwards (Open Redirect)',
+            'Reflected Cross-Site Scripting (XSS)',
+            'Insecure Direct Object References (IDOR)'
+          ],
+          correctIndex: 1,
+          explanation: 'Open Redirect vulnerabilities occur when a web application accepts untrusted user input as a redirection target without proper whitelist validation, commonly chained in spear phishing campaigns.',
+          examTip: 'Mitigate with domain whitelist validation and relative-path enforcement.'
+        },
+        {
+          id: 'w-d5-1',
+          domainNumber: 5,
+          domainName: 'Domain 5: Network Sniffing & Evasion',
+          question: 'An administrator needs to prevent ARP cache poisoning across their local enterprise network. Which layer-2 switch feature inspects ARP packets and discards invalid IP-to-MAC bindings?',
+          options: [
+            'Port Security with MAC sticky',
+            'Dynamic ARP Inspection (DAI)',
+            'BPDU Guard on access ports',
+            'Spanning Tree Root Guard'
+          ],
+          correctIndex: 1,
+          explanation: 'Dynamic ARP Inspection (DAI) uses the DHCP snooping binding table to validate ARP packets on untrusted switch ports, dropping poisoned gratuitous ARP broadcasts.',
+          examTip: 'DAI depends strictly on DHCP Snooping being active on the VLAN.'
+        },
+        {
+          id: 'w-d2-1',
+          domainNumber: 2,
+          domainName: 'Domain 2: Network & System Scanning',
+          question: 'Which Nmap scan flag combines OS detection, version detection, script scanning, and traceroute in a single rapid command line pass?',
+          options: [
+            'nmap -sS -p- 192.168.1.1',
+            'nmap -A -T4 192.168.1.1',
+            'nmap -sU -sV 192.168.1.1',
+            'nmap -O --osscan-guess 192.168.1.1'
+          ],
+          correctIndex: 1,
+          explanation: 'The `-A` flag enables Aggressive scanning: OS detection (-O), version scanning (-sV), script scanning (-sC), and traceroute (--traceroute).',
+          examTip: 'Crucial for initial triage on CEH Practical labs.'
+        },
+        {
+          id: 'w-d8-1',
+          domainNumber: 8,
+          domainName: 'Domain 8: Cloud Computing & Cryptography',
+          question: 'In asymmetric public-key cryptography, which key is used by a sender to verify the authenticity and non-repudiation of a digital signature created by the signer?',
+          options: [
+            'The sender\'s private key',
+            'The sender\'s public key',
+            'The signer\'s public key',
+            'A shared Diffie-Hellman secret key'
+          ],
+          correctIndex: 2,
+          explanation: 'Digital signatures are generated using the signer\'s private key and verified by anyone possessing the signer\'s public key.',
+          examTip: 'Rule: Sign with Private Key -> Verify with Public Key; Encrypt with Public Key -> Decrypt with Private Key.'
+        },
+        {
+          id: 'w-d3-1',
+          domainNumber: 3,
+          domainName: 'Domain 3: Vulnerability Assessment',
+          question: 'Which automated vulnerability assessment phase determines whether identified vulnerabilities are exploitable through proof-of-concept verification?',
+          options: [
+            'Passive vulnerability identification',
+            'Vulnerability penetration / exploitation testing',
+            'Vulnerability remediation verification',
+            'Risk classification matrix ranking'
+          ],
+          correctIndex: 1,
+          explanation: 'Vulnerability assessments identify security weaknesses, while penetration testing moves into active exploitation to verify actual business risk and eliminate false positives.',
+          examTip: 'Distinguish between vulnerability scanning (detection) vs penetration testing (exploitation).'
+        }
+      ];
+
+      // Prioritize questions from targeted weak domains
+      const filtered = WEAKNESS_QUESTION_BANK.filter((q) => targetDomainNumbers.has(q.domainNumber));
+      const finalQuestions = filtered.length >= 4 ? filtered : WEAKNESS_QUESTION_BANK;
+
+      setWeaknessQuestions(finalQuestions);
+      setWeaknessAnswers({});
+      setWeaknessRevealed({});
+    } catch {
+      // fallback
+    }
+  };
+
+  useEffect(() => {
+    analyzeAndGenerateWeaknessTest();
+  }, []);
+
+  const handleSelectWeakness = (qId: string, optIdx: number) => {
+    if (weaknessRevealed[qId]) return;
+    setWeaknessAnswers((prev) => ({ ...prev, [qId]: optIdx }));
+    setWeaknessRevealed((prev) => ({ ...prev, [qId]: true }));
+
+    const question = weaknessQuestions.find((q) => q.id === qId);
+    if (question && question.correctIndex === optIdx) {
+      playFlashcardSuccessSound();
+    }
+  };
+
+  const weaknessCorrectCount = weaknessQuestions.filter(
+    (q) => weaknessAnswers[q.id] === q.correctIndex
+  ).length;
+
   return (
     <div className="space-y-6">
+      {/* Historical Performance Overview Chart */}
+      <PracticePerformanceChart
+        currentSolvedFlags={solvedCount}
+        currentWrittenScore={writtenCorrectCount}
+      />
+
       {/* Mode Navigation */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900 border border-slate-800">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             id="test-mode-practical"
             onClick={() => setExamMode('practical')}
@@ -140,10 +372,44 @@ export const PracticeTestsView: React.FC = () => {
             <BookOpen className="w-4 h-4" />
             <span>CEH Written Domain Quiz</span>
           </button>
+
+          {/* Dynamic Weakness Revision Mode */}
+          <button
+            id="test-mode-weakness"
+            onClick={() => {
+              setExamMode('weakness');
+              analyzeAndGenerateWeaknessTest();
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              examMode === 'weakness'
+                ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+                : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-850'
+            }`}
+          >
+            <Target className="w-4 h-4 text-rose-400" />
+            <span>Weakness Revision Test</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">
+              Adaptive
+            </span>
+          </button>
         </div>
 
         {examMode === 'practical' && (
           <div className="flex items-center gap-3">
+            {/* Audio cues toggle */}
+            <button
+              onClick={handleToggleAudio}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              title={audioEnabled ? 'Session Audio Cues: Enabled (Click to Mute)' : 'Session Audio Cues: Muted (Click to Enable)'}
+              aria-label="Toggle Audio Cues"
+            >
+              {audioEnabled ? (
+                <Volume2 className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <VolumeX className="w-4 h-4 text-slate-500" />
+              )}
+            </button>
+
             {/* Countdown Clock */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs">
               <Clock className="w-4 h-4 text-emerald-400" />
@@ -163,10 +429,13 @@ export const PracticeTestsView: React.FC = () => {
               onClick={() => {
                 setIsTimerRunning(false);
                 setSecondsRemaining(APP_CONFIG.examParameters.practicalDurationSeconds);
-                localStorage.setItem(STORAGE_KEYS.PRACTICAL_TIMER, APP_CONFIG.examParameters.practicalDurationSeconds.toString());
+                localStorage.setItem(
+                  STORAGE_KEYS.PRACTICAL_TIMER,
+                  APP_CONFIG.examParameters.practicalDurationSeconds.toString()
+                );
               }}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
-              title="Reset Timer to 6 Hours"
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white"
+              title="Reset 6-Hour Timer"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -505,6 +774,137 @@ export const PracticeTestsView: React.FC = () => {
                     <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1.5">
                       <span className="font-bold text-teal-400 font-mono">Why this is correct:</span>
                       <p className="text-slate-300 leading-relaxed">{q.explanation}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* --- WEAKNESS REVISION TEST MODE --- */}
+      {examMode === 'weakness' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Diagnostic Banner */}
+          <div className="p-6 rounded-2xl bg-slate-900 border border-rose-500/30 shadow-xl space-y-4 relative overflow-hidden">
+            <div className="absolute -right-10 -top-10 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-bold uppercase tracking-wider">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>Dynamic Diagnostic Engine</span>
+                </div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span>Targeted Weakness Revision Test</span>
+                </h3>
+                <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                  Synthesizes tasks and historical performance from your Domain Progress Tracker. Questions below focus exclusively on domains with the lowest completion and highest failure probability.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={analyzeAndGenerateWeaknessTest}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"
+                  title="Re-analyze domain progress and generate fresh weakness questions"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Re-analyze</span>
+                </button>
+
+                <div className="text-xs font-mono font-bold text-rose-300 bg-slate-950 px-3 py-2 rounded-xl border border-rose-500/30">
+                  Score: {weaknessCorrectCount} / {weaknessQuestions.length}
+                </div>
+              </div>
+            </div>
+
+            {/* Targeted Weakness Chips */}
+            <div className="pt-2 border-t border-slate-800/80">
+              <span className="text-[11px] text-slate-400 font-medium block mb-2">Detected Lowest Scoring Domains:</span>
+              <div className="flex flex-wrap gap-2">
+                {weaknessAnalysis.slice(0, 3).map((w) => (
+                  <div
+                    key={w.domainNumber}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-rose-500/30 text-xs"
+                  >
+                    <span className="font-mono font-bold text-rose-400">Domain {w.domainNumber}</span>
+                    <span className="text-slate-300 truncate max-w-[200px]">{w.domainName}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-300 font-bold">
+                      {w.completionRate}% Mastery
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Weakness Questions List */}
+          <div className="space-y-5">
+            {weaknessQuestions.map((q, qIndex) => {
+              const isAnswered = weaknessRevealed[q.id];
+              const selectedOpt = weaknessAnswers[q.id];
+
+              return (
+                <div
+                  key={q.id}
+                  className="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20 font-bold">
+                      Domain {q.domainNumber} Weakness Drill
+                    </span>
+                    <span className="text-xs text-slate-500 font-mono">Question {qIndex + 1} of {weaknessQuestions.length}</span>
+                  </div>
+
+                  <p className="text-sm font-semibold text-slate-100 leading-relaxed">
+                    {q.question}
+                  </p>
+
+                  <div className="space-y-2">
+                    {q.options.map((opt: string, idx: number) => {
+                      let optClass = 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700';
+
+                      if (isAnswered) {
+                        if (idx === q.correctIndex) {
+                          optClass = 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-semibold';
+                        } else if (selectedOpt === idx) {
+                          optClass = 'bg-rose-500/20 border-rose-500 text-rose-300';
+                        } else {
+                          optClass = 'bg-slate-950/50 border-slate-900 text-slate-500';
+                        }
+                      }
+
+                      return (
+                        <button
+                          key={idx}
+                          disabled={isAnswered}
+                          onClick={() => handleSelectWeakness(q.id, idx)}
+                          className={`w-full p-3.5 rounded-xl border text-xs text-left transition-all flex items-center justify-between ${optClass}`}
+                        >
+                          <div>
+                            <span className="font-mono text-slate-500 mr-2">[{String.fromCharCode(65 + idx)}]</span>
+                            <span>{opt}</span>
+                          </div>
+                          {isAnswered && idx === q.correctIndex && (
+                            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {isAnswered && (
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-2 animate-fadeIn">
+                      <div className="flex items-center gap-2 text-emerald-400 font-bold font-mono">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Remediation Breakdown:</span>
+                      </div>
+                      <p className="text-slate-300 leading-relaxed">{q.explanation}</p>
+                      <p className="text-teal-400 font-mono text-[11px]">
+                        💡 Blueprint Exam Strategy: {q.examTip}
+                      </p>
                     </div>
                   )}
                 </div>

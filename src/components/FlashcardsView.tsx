@@ -164,6 +164,15 @@ export const FlashcardsView: React.FC = () => {
     });
   };
 
+  // Add newly generated cards (e.g. from Gemini Scenario Lab)
+  const handleAddGeneratedCards = (newCards: Flashcard[]) => {
+    setCards(prev => {
+      const existingIds = new Set(prev.map(c => c.id));
+      const filtered = newCards.filter(c => !existingIds.has(c.id));
+      return [...filtered, ...prev];
+    });
+  };
+
   // Overall Statistics
   const totalCards = cards.length;
   const masteredCount = cards.filter(c => c.isMastered).length;
@@ -180,6 +189,10 @@ export const FlashcardsView: React.FC = () => {
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-bold font-mono">
                 <Brain className="w-3.5 h-3.5" />
                 CEH v13 Blueprint Review
+              </span>
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-xs font-bold font-mono">
+                <Sparkles className="w-3.5 h-3.5" />
+                Gemini AI Scenario Generator
               </span>
               <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-mono">
                 Local Storage Persistent
@@ -275,6 +288,7 @@ export const FlashcardsView: React.FC = () => {
           onToggleMastered={handleToggleMastered}
           onOpenCreateModal={handleOpenCreateModal}
           onResetCategoryMastery={handleResetCategoryMastery}
+          onAddCards={handleAddGeneratedCards}
         />
       ) : (
         <FlashcardManager

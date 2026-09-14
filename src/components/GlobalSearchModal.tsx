@@ -18,7 +18,8 @@ import {
   Command as CommandIcon,
   Layers,
   Wrench,
-  Lock
+  Lock,
+  Star
 } from 'lucide-react';
 import { ExamTab, GlobalSearchItem, SearchFilterCategory } from '../types';
 import { 
@@ -26,6 +27,9 @@ import {
   POPULAR_SEARCH_SUGGESTIONS, 
   GLOBAL_SEARCH_INDEX 
 } from '../data/searchIndex';
+import { isBookmarked, toggleBookmark } from '../utils/bookmarkManager';
+import { triggerAutoSaveToast } from '../utils/autoSaveEvent';
+import { playFlashcardSuccessSound } from '../utils/audioCues';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -42,6 +46,32 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   const [activeFilter, setActiveFilter] = useState<SearchFilterCategory>('all');
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [bookmarkUpdateCounter, setBookmarkUpdateCounter] = useState<number>(0);
+
+  const handleToggleStarResult = (item: GlobalSearchItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const alreadyBookmarked = isBookmarked(item.id);
+    toggleBookmark({
+      id: item.id,
+      type: item.copyable ? 'command' : 'note',
+      title: item.title,
+      category: item.category,
+      sourceTab: item.targetTab,
+      description: item.description,
+      content: item.copyable || item.contentSnippet || '',
+      tags: [item.badge, item.targetTab],
+      createdAt: new Date().toISOString(),
+    });
+
+    if (!alreadyBookmarked) {
+      playFlashcardSuccessSound();
+      triggerAutoSaveToast(`Starred "${item.title}" to Bookmarks!`);
+    } else {
+      triggerAutoSaveToast(`Removed "${item.title}" from Bookmarks.`);
+    }
+
+    setBookmarkUpdateCounter((prev) => prev + 1);
+  };
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -374,6 +404,21 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
+                      {/* Quick Bookmark / Star Search Result */}
+                      <button
+                        id={`star-search-${item.id}`}
+                        onClick={(e) => handleToggleStarResult(item, e)}
+                        className={`p-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 border ${
+                          isBookmarked(item.id)
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                        }`}
+                        title={isBookmarked(item.id) ? "Remove from bookmarks" : "Star search result to study vault"}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${isBookmarked(item.id) ? 'text-amber-400 fill-amber-400' : 'text-slate-400'}`} />
+                        <span className="text-[10px] hidden sm:inline">{isBookmarked(item.id) ? 'Starred' : 'Star'}</span>
+                      </button>
+
                       {item.copyable && (
                         <button
                           id={`copy-search-${item.id}`}

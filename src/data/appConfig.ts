@@ -44,6 +44,13 @@ export const STORAGE_KEYS = {
   STUDY_GOALS: 'kaybit_ceh_study_goals',
   APP_THEME: 'kaybit_ceh_theme',
   TERMINAL_THEME: 'kaybit_ceh_terminal_theme',
+  AUDIO_CUES_ENABLED: 'kaybit_ceh_audio_cues_enabled',
+  AUDIO_COMPLETION_ENABLED: 'kaybit_ceh_completion_cues_enabled',
+  AUDIO_TIMER_ALERTS_ENABLED: 'kaybit_ceh_timer_alerts_enabled',
+  BOOKMARKS: 'kaybit_ceh_bookmarks',
+  FOCUS_MODE: 'kaybit_ceh_focus_mode',
+  TEST_HISTORY: 'kaybit_ceh_test_history',
+  PINNED_SNIPPETS: 'kaybit_ceh_pinned_snippets',
 } as const;
 
 /**
@@ -64,6 +71,7 @@ export const FOOTER_QUICK_LINKS = [
   { label: 'Multi-Lang Lab', tab: 'methodology' as ExamTab },
   { label: '6-Hour Mock Lab', tab: 'tests' as ExamTab },
   { label: 'AI Flashcards', tab: 'flashcards' as ExamTab },
+  { label: 'My Bookmarks', tab: 'bookmarks' as ExamTab },
   { label: 'Offline Builds', tab: 'installation' as ExamTab },
 ] as const;
 
@@ -123,6 +131,12 @@ export const NAV_ITEMS_CONFIG: NavItemConfig[] = [
     label: 'Flashcards', 
     badge: 'Spaced Rep', 
     description: 'Domain-Categorized Study Cards, Mastery Tracker & Custom Card Creator' 
+  },
+  { 
+    id: 'bookmarks', 
+    label: 'My Bookmarks', 
+    badge: 'Saved', 
+    description: 'Saved topics, notes, cheat sheets, and essential commands for rapid revision' 
   },
   { 
     id: 'installation', 

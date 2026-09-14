@@ -14,12 +14,16 @@ import {
   Layers, 
   PieChart, 
   FileCode,
-  RotateCcw
+  RotateCcw,
+  Mic,
+  MicOff,
+  Volume2
 } from 'lucide-react';
 import { EXAM_DOMAINS_PROGRESS } from '../data/progressData';
 import { ExamDomainProgress } from '../types';
 import { STORAGE_KEYS } from '../data/appConfig';
 import { triggerAutoSaveToast } from '../utils/autoSaveEvent';
+import { exportProgressAndBookmarksMarkdown } from '../utils/exportMarkdownReport';
 
 // Domain-tailored starter templates matching CEH v13 Blueprint objectives
 const DOMAIN_STARTER_TEMPLATES: Record<string, string> = {
@@ -286,6 +290,11 @@ export const WrittenDomainScratchpad: React.FC<WrittenDomainScratchpadProps> = (
 
   const isInitialMount = useRef(true);
 
+  // Current selected domain object
+  const currentDomain: ExamDomainProgress = useMemo(() => {
+    return EXAM_DOMAINS_PROGRESS.find((d) => d.id === selectedDomainId) || EXAM_DOMAINS_PROGRESS[0];
+  }, [selectedDomainId]);
+
   // Sync to localStorage
   useEffect(() => {
     try {
@@ -302,13 +311,96 @@ export const WrittenDomainScratchpad: React.FC<WrittenDomainScratchpadProps> = (
     }
   }, [domainNotes, currentDomain.name]);
 
-  // Current selected domain object
-  const currentDomain: ExamDomainProgress = useMemo(() => {
-    return EXAM_DOMAINS_PROGRESS.find((d) => d.id === selectedDomainId) || EXAM_DOMAINS_PROGRESS[0];
-  }, [selectedDomainId]);
-
   // Current note text for selected domain
   const currentText = domainNotes[currentDomain.id] || '';
+
+  // Web Speech API Voice Dictation State
+  const [isRecordingSpeech, setIsRecordingSpeech] = useState(false);
+  const [speechTranscript, setSpeechTranscript] = useState('');
+  const [speechSupported, setSpeechSupported] = useState(true);
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Check speech recognition capability on mount
+  useEffect(() => {
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      setSpeechSupported(false);
+    }
+  }, []);
+
+  const startSpeechRecording = () => {
+    setSpeechError(null);
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      setSpeechSupported(false);
+      setSpeechError('Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+
+      const recognition = new SpeechRec();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsRecordingSpeech(true);
+        setSpeechTranscript('');
+        setSpeechError(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        let currentResult = '';
+        for (let i = 0; i < event.results.length; i++) {
+          currentResult += event.results[i][0].transcript;
+        }
+        setSpeechTranscript(currentResult);
+      };
+
+      recognition.onerror = (event: any) => {
+        if (event.error !== 'no-speech') {
+          setSpeechError(`Voice Error: ${event.error}`);
+        }
+        setIsRecordingSpeech(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecordingSpeech(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Failed to start speech recognition', err);
+      setSpeechError('Microphone permission denied or device not found.');
+      setIsRecordingSpeech(false);
+    }
+  };
+
+  const stopSpeechRecording = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+    }
+    setIsRecordingSpeech(false);
+  };
+
+  const handleAppendSpeechToNotes = () => {
+    if (!speechTranscript.trim()) return;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const spokenBlock = `\n\n### 🎙️ Spoken Summary (${timeStr})\n${speechTranscript.trim()}\n`;
+    handleUpdateNote(currentText + spokenBlock);
+    setSpeechTranscript('');
+    stopSpeechRecording();
+    triggerAutoSaveToast('Transcribed speech summary inserted into notes!');
+  };
 
   // Stats
   const wordCount = useMemo(() => {
@@ -596,6 +688,37 @@ Total Words: ${totalWordsAcrossAll}
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {/* Voice Dictation (Web Speech API) */}
+                <button
+                  id="btn-voice-dictate"
+                  type="button"
+                  onClick={isRecordingSpeech ? stopSpeechRecording : startSpeechRecording}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border shadow-sm ${
+                    isRecordingSpeech
+                      ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-400 animate-pulse'
+                      : 'bg-slate-950 hover:bg-slate-800 text-rose-300 hover:text-rose-200 border-rose-500/30'
+                  }`}
+                  title={
+                    !speechSupported
+                      ? 'Web Speech API is not supported in this browser'
+                      : isRecordingSpeech
+                      ? 'Click to stop recording spoken summary'
+                      : 'Record spoken study summary (Speech-to-Text)'
+                  }
+                >
+                  {isRecordingSpeech ? (
+                    <>
+                      <MicOff className="w-3.5 h-3.5 text-white" />
+                      <span>Stop Dictation</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Record Voice Summary</span>
+                    </>
+                  )}
+                </button>
+
                 <button
                   id="btn-insert-template"
                   type="button"
@@ -652,6 +775,63 @@ Total Words: ${totalWordsAcrossAll}
                 )}
               </div>
             </div>
+
+            {/* Voice Dictation Active Recording / Transcript Preview Banner */}
+            {(isRecordingSpeech || speechTranscript || speechError) && (
+              <div className="p-4 rounded-xl bg-slate-950 border border-rose-500/30 space-y-2 shadow-lg animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${isRecordingSpeech ? 'bg-rose-500 animate-ping' : 'bg-slate-500'}`} />
+                    <span className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                      <Mic className="w-3.5 h-3.5 text-rose-400" />
+                      <span>{isRecordingSpeech ? 'Listening (Web Speech API Active)... Speak your summary' : 'Voice Dictation Paused'}</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {speechTranscript && (
+                      <button
+                        type="button"
+                        onClick={handleAppendSpeechToNotes}
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shadow-sm"
+                      >
+                        <Check className="w-3 h-3" />
+                        <span>Insert into Note</span>
+                      </button>
+                    )}
+                    {isRecordingSpeech ? (
+                      <button
+                        type="button"
+                        onClick={stopSpeechRecording}
+                        className="px-2.5 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-xs font-medium transition-colors"
+                      >
+                        Stop
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setSpeechTranscript(''); setSpeechError(null); }}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {speechError ? (
+                  <p className="text-xs text-rose-400 font-mono">{speechError}</p>
+                ) : (
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 font-mono leading-relaxed min-h-[44px]">
+                    {speechTranscript ? (
+                      <span>&ldquo;{speechTranscript}&rdquo;</span>
+                    ) : (
+                      <span className="text-slate-500 italic">Listening for spoken summary... speak clearly into your microphone.</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Note Editor Area */}
             <div className="space-y-2">

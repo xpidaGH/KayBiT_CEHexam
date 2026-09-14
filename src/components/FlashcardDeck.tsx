@@ -21,24 +21,35 @@ import {
   VolumeX,
   Wand2,
   Maximize2,
-  X
+  X,
+  Bell,
+  BellOff
 } from 'lucide-react';
 import { Flashcard } from '../types';
 import { FLASHCARD_CATEGORIES, FlashcardCategory } from '../data/flashcardsData';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
+import { GeminiScenarioGeneratorModal } from './GeminiScenarioGeneratorModal';
+import { 
+  playFlashcardSuccessSound, 
+  playDeckMasteredFanfare, 
+  isAudioCuesEnabled, 
+  setAudioCuesEnabled 
+} from '../utils/audioCues';
 
 interface FlashcardDeckProps {
   cards: Flashcard[];
   onToggleMastered: (id: string) => void;
   onOpenCreateModal: (domainId?: string) => void;
   onResetCategoryMastery: (domainId: string) => void;
+  onAddCards?: (newCards: Flashcard[]) => void;
 }
 
 export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
   cards,
   onToggleMastered,
   onOpenCreateModal,
-  onResetCategoryMastery
+  onResetCategoryMastery,
+  onAddCards
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'unmastered' | 'mastered'>('all');
@@ -47,11 +58,28 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
   const [showHint, setShowHint] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [shuffledOrder, setShuffledOrder] = useState<number[] | null>(null);
+  const [isScenarioModalOpen, setIsScenarioModalOpen] = useState<boolean>(false);
   const [selectedMnemonicModal, setSelectedMnemonicModal] = useState<{
     url: string;
     prompt?: string;
     title: string;
   } | null>(null);
+  const [audioCuesOn, setAudioCuesOn] = useState<boolean>(() => isAudioCuesEnabled());
+
+  // Synchronize with global audio cues toggle
+  useEffect(() => {
+    const handleAudioToggle = (e: CustomEvent<{ enabled: boolean }>) => {
+      setAudioCuesOn(e.detail.enabled);
+    };
+    window.addEventListener('audio-cues-toggle' as any, handleAudioToggle);
+    return () => window.removeEventListener('audio-cues-toggle' as any, handleAudioToggle);
+  }, []);
+
+  const handleToggleAudioCues = () => {
+    const next = !audioCuesOn;
+    setAudioCuesOn(next);
+    setAudioCuesEnabled(next);
+  };
 
   // Initialize Text-To-Speech for audio card read-aloud
   const {
@@ -185,7 +213,7 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
       } else if (e.key === 'm' || e.key === 'M') {
         if (currentCard) {
           e.preventDefault();
-          onToggleMastered(currentCard.id);
+          handleMasteryClick(currentCard.id);
         }
       } else if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
@@ -217,6 +245,22 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
     : 0;
 
   const currentCategoryInfo = FLASHCARD_CATEGORIES.find(c => c.id === selectedCategory);
+
+  const handleMasteryClick = (cardId: string) => {
+    const targetCard = cards.find(c => c.id === cardId);
+    if (!targetCard) return;
+    const willBeMastered = !targetCard.isMastered;
+    onToggleMastered(cardId);
+
+    if (willBeMastered) {
+      const remainingUnmastered = categoryCards.filter(c => !c.isMastered && c.id !== cardId).length;
+      if (remainingUnmastered === 0 && categoryCards.length > 1) {
+        playDeckMasteredFanfare();
+      } else {
+        playFlashcardSuccessSound();
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -326,6 +370,33 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
             )}
 
             <button
+              id="btn-toggle-flashcard-audio-cues"
+              type="button"
+              onClick={handleToggleAudioCues}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs transition-colors ${
+                audioCuesOn
+                  ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-500 hover:text-slate-400 border-slate-700/70'
+              }`}
+              title={audioCuesOn ? 'Mastery sound cues enabled' : 'Mastery sound cues muted'}
+            >
+              {audioCuesOn ? <Bell className="w-3 h-3 text-emerald-400" /> : <BellOff className="w-3 h-3 text-slate-500" />}
+              <span className="hidden sm:inline">Audio Cues</span>
+            </button>
+
+            <button
+              id="btn-gemini-generate-scenarios"
+              type="button"
+              onClick={() => setIsScenarioModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 hover:from-emerald-500/30 hover:to-cyan-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all shadow-sm shadow-emerald-500/10 group"
+              title="Generate complex scenario-based practice questions with Gemini AI based on this deck's topic"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-12 transition-transform" />
+              <span className="hidden sm:inline">AI Scenario Questions</span>
+              <span className="sm:hidden">AI Scenarios</span>
+            </button>
+
+            <button
               id="btn-deck-new-card"
               type="button"
               onClick={() => onOpenCreateModal(selectedCategory)}
@@ -367,6 +438,14 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
             >
               Create Flashcard for this Category
             </button>
+            <button
+              type="button"
+              onClick={() => setIsScenarioModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>Generate Scenario Questions with Gemini</span>
+            </button>
           </div>
         </div>
       ) : (
@@ -383,6 +462,15 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsScenarioModalOpen(true)}
+                className="hidden md:flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-medium transition-colors"
+                title="Practice complex scenarios for this topic"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Test with AI Scenarios</span>
+              </button>
               {currentCard?.isMastered ? (
                 <span className="flex items-center gap-1 text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                   <CheckCircle2 className="w-3 h-3" />
@@ -665,7 +753,7 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                 <button
                   id="btn-mark-mastered"
                   type="button"
-                  onClick={() => currentCard && onToggleMastered(currentCard.id)}
+                  onClick={() => currentCard && handleMasteryClick(currentCard.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all text-xs ${
                     currentCard?.isMastered
                       ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
@@ -680,7 +768,7 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                 {currentCard?.isMastered && (
                   <button
                     type="button"
-                    onClick={() => currentCard && onToggleMastered(currentCard.id)}
+                    onClick={() => currentCard && handleMasteryClick(currentCard.id)}
                     className="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs"
                     title="Demote card back to Needs Review"
                   >
@@ -837,6 +925,18 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
           </div>
         </div>
       )}
+      {/* Gemini AI Scenario-Based Question Generator Modal */}
+      <GeminiScenarioGeneratorModal
+        isOpen={isScenarioModalOpen}
+        onClose={() => setIsScenarioModalOpen(false)}
+        currentCategory={FLASHCARD_CATEGORIES.find(c => c.id === selectedCategory) || FLASHCARD_CATEGORIES[0]}
+        deckCards={cards.filter(c => selectedCategory === 'all' ? true : selectedCategory === 'custom' ? c.isCustom : c.domainId === selectedCategory)}
+        onAddCardsToDeck={(newCards) => {
+          if (onAddCards) {
+            onAddCards(newCards);
+          }
+        }}
+      />
     </div>
   );
 };

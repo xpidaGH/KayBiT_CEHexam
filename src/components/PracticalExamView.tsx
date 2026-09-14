@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   Terminal, 
@@ -11,11 +11,17 @@ import {
   FolderDown, 
   ChevronRight,
   AlertCircle,
-  Maximize2
+  Maximize2,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
 import { BIG_THREE_REPOSITORIES, PRACTICAL_PILLARS, BigThreeRepo } from '../data/cehPracticalData';
 import { PracticalPillar } from '../types';
 import { PracticalZenMode } from './PracticalZenMode';
+import { TERMINAL_THEMES, DEFAULT_TERMINAL_THEME, TerminalTheme } from '../data/terminalThemes';
+import { TerminalThemeSelector } from './TerminalThemeSelector';
+import { STORAGE_KEYS } from '../data/appConfig';
+import { isBookmarked, toggleBookmark } from '../utils/bookmarkManager';
 
 interface PracticalExamViewProps {
   onNavigateToSimulator?: () => void;
@@ -40,6 +46,35 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({
   const [selectedRepo, setSelectedRepo] = useState<BigThreeRepo>(BIG_THREE_REPOSITORIES[0]);
   const [selectedPillar, setSelectedPillar] = useState<PracticalPillar>(PRACTICAL_PILLARS[0]);
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [, setBookmarkTick] = useState(0);
+
+  useEffect(() => {
+    const handleBookmarkChange = () => setBookmarkTick((prev) => prev + 1);
+    window.addEventListener('bookmarks-updated', handleBookmarkChange);
+    return () => window.removeEventListener('bookmarks-updated', handleBookmarkChange);
+  }, []);
+
+  const [terminalTheme, setTerminalTheme] = useState<TerminalTheme>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.TERMINAL_THEME);
+      if (saved) {
+        const found = TERMINAL_THEMES.find((t) => t.id === saved);
+        if (found) return found;
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_TERMINAL_THEME;
+  });
+
+  const handleSelectTheme = (theme: TerminalTheme) => {
+    setTerminalTheme(theme);
+    try {
+      localStorage.setItem(STORAGE_KEYS.TERMINAL_THEME, theme.id);
+    } catch {
+      // ignore
+    }
+  };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -68,6 +103,8 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({
       <PracticalZenMode
         onExitZenMode={() => setZenMode(false)}
         initialPillarId={selectedPillar.id}
+        terminalTheme={terminalTheme}
+        onSelectTerminalTheme={handleSelectTheme}
       />
     );
   }
@@ -135,33 +172,41 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({
           </div>
         </div>
 
-        {/* Subtab Toggle */}
-        <div className="flex flex-wrap items-center gap-2 mt-6 pt-5 border-t border-slate-800">
-          <button
-            id="subtab-pillars"
-            onClick={() => setActiveSubTab('pillars')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-              activeSubTab === 'pillars'
-                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-700'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Target Areas to Practice (The 4 Pillars)</span>
-          </button>
+        {/* Subtab Toggle and Terminal Theme Selector */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-6 pt-5 border-t border-slate-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              id="subtab-pillars"
+              onClick={() => setActiveSubTab('pillars')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeSubTab === 'pillars'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-700'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Target Areas to Practice (The 4 Pillars)</span>
+            </button>
 
-          <button
-            id="subtab-big-three"
-            onClick={() => setActiveSubTab('big-three')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-              activeSubTab === 'big-three'
-                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-700'
-            }`}
-          >
-            <Terminal className="w-4 h-4" />
-            <span>The "Big Three" Open-Source Cheat Sheets</span>
-          </button>
+            <button
+              id="subtab-big-three"
+              onClick={() => setActiveSubTab('big-three')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeSubTab === 'big-three'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-700'
+              }`}
+            >
+              <Terminal className="w-4 h-4" />
+              <span>The "Big Three" Open-Source Cheat Sheets</span>
+            </button>
+          </div>
+
+          {/* Terminal Color Scheme Selector */}
+          <TerminalThemeSelector
+            currentThemeId={terminalTheme.id}
+            onSelectTheme={handleSelectTheme}
+          />
         </div>
       </div>
 
@@ -214,6 +259,47 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({
                   {selectedPillar.whyItMatters}
                 </p>
               </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  id={`btn-bookmark-pillar-${selectedPillar.id}`}
+                  type="button"
+                  onClick={() => {
+                    toggleBookmark({
+                      id: `pillar-${selectedPillar.id}`,
+                      type: 'pillar',
+                      title: selectedPillar.title,
+                      category: '4 Practical Pillars',
+                      sourceTab: 'practical',
+                      sourceSubTab: 'pillars',
+                      targetId: selectedPillar.id,
+                      description: selectedPillar.summary,
+                      content: selectedPillar.essentialCommands.map((c) => `${c.cmd}\n# ${c.explanation}`).join('\n\n'),
+                      notes: `Weight: ${selectedPillar.examWeight}. Tools: ${selectedPillar.coreTools.join(', ')}`,
+                      tags: [...selectedPillar.coreTools, 'Practical Pillar'],
+                      createdAt: new Date().toISOString(),
+                    });
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    isBookmarked(`pillar-${selectedPillar.id}`)
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  }`}
+                  title={isBookmarked(`pillar-${selectedPillar.id}`) ? 'Saved in My Bookmarks' : 'Bookmark this Practical Pillar'}
+                >
+                  {isBookmarked(`pillar-${selectedPillar.id}`) ? (
+                    <>
+                      <BookmarkCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Bookmarked</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="w-3.5 h-3.5" />
+                      <span>Bookmark Pillar</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Essential Commands with Flag Breakdown */}
@@ -226,13 +312,48 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({
                   <div key={idx} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                     <div className="flex items-center justify-between">
                       <code className="text-xs font-mono text-emerald-300 font-semibold break-all mr-2">{item.cmd}</code>
-                      <button
-                        onClick={() => handleCopy(item.cmd)}
-                        className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-900 border border-slate-800 shrink-0"
-                      >
-                        {copiedText === item.cmd ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedText === item.cmd ? 'Copied' : 'Copy'}</span>
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          id={`btn-bookmark-cmd-${selectedPillar.id}-${idx}`}
+                          type="button"
+                          onClick={() => {
+                            const cmdId = `cmd-${selectedPillar.id}-${idx}`;
+                            toggleBookmark({
+                              id: cmdId,
+                              type: 'command',
+                              title: `${selectedPillar.title.split(':')[0] || 'Command'}: ${item.cmd.split(' ')[0]}`,
+                              category: 'Essential Command',
+                              sourceTab: 'practical',
+                              sourceSubTab: 'pillars',
+                              targetId: selectedPillar.id,
+                              description: item.explanation,
+                              content: item.cmd,
+                              notes: item.flagDetails,
+                              tags: [selectedPillar.title.split(':')[0] || 'Practical', item.cmd.split(' ')[0]],
+                              createdAt: new Date().toISOString(),
+                            });
+                          }}
+                          className={`p-1.5 rounded border transition-colors ${
+                            isBookmarked(`cmd-${selectedPillar.id}-${idx}`)
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border-slate-800'
+                          }`}
+                          title={isBookmarked(`cmd-${selectedPillar.id}-${idx}`) ? 'Saved in My Bookmarks' : 'Bookmark command'}
+                        >
+                          {isBookmarked(`cmd-${selectedPillar.id}-${idx}`) ? (
+                            <BookmarkCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Bookmark className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleCopy(item.cmd)}
+                          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-900 border border-slate-800 shrink-0"
+                        >
+                          {copiedText === item.cmd ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedText === item.cmd ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      </div>
                     </div>
                     <p className="text-xs text-slate-300">{item.explanation}</p>
                     <p className="text-[11px] font-mono text-slate-500 border-t border-slate-900 pt-1.5">
@@ -290,7 +411,14 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({
                     <span>Copy Output</span>
                   </button>
                 </div>
-                <pre className="p-3.5 rounded-lg bg-slate-900 text-xs text-emerald-300 font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed border border-slate-800">
+                <pre 
+                  className="p-3.5 rounded-lg text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed border transition-colors"
+                  style={{
+                    backgroundColor: terminalTheme.bg,
+                    color: terminalTheme.prompt,
+                    borderColor: terminalTheme.border
+                  }}
+                >
                   {selectedPillar.scenarioWalkthrough.sampleTerminalOutput}
                 </pre>
               </div>
@@ -338,15 +466,55 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({
                 </p>
               </div>
 
-              <a
-                href={selectedRepo.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 border border-teal-500/30 text-xs font-medium transition-colors shrink-0"
-              >
-                <span>Browse Repository</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  id={`btn-bookmark-cheatsheet-${selectedRepo.id}`}
+                  type="button"
+                  onClick={() => {
+                    toggleBookmark({
+                      id: `cheatsheet-${selectedRepo.id}`,
+                      type: 'cheatsheet',
+                      title: `${selectedRepo.name} Cheat Sheet`,
+                      category: 'Practical Cheat Sheet',
+                      sourceTab: 'practical',
+                      sourceSubTab: 'big-three',
+                      targetId: selectedRepo.id,
+                      description: selectedRepo.corePhilosophy,
+                      content: selectedRepo.keySnippets.map((s) => `# ${s.label}\n${s.code}\n# Notes: ${s.notes}`).join('\n\n'),
+                      tags: [selectedRepo.authorRepo, 'Open Source', 'Cheat Sheet'],
+                      createdAt: new Date().toISOString(),
+                    });
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    isBookmarked(`cheatsheet-${selectedRepo.id}`)
+                      ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  }`}
+                  title={isBookmarked(`cheatsheet-${selectedRepo.id}`) ? 'Saved in My Bookmarks' : 'Bookmark this cheat sheet'}
+                >
+                  {isBookmarked(`cheatsheet-${selectedRepo.id}`) ? (
+                    <>
+                      <BookmarkCheck className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Bookmarked</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="w-3.5 h-3.5" />
+                      <span>Bookmark Sheet</span>
+                    </>
+                  )}
+                </button>
+
+                <a
+                  href={selectedRepo.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 border border-teal-500/30 text-xs font-medium transition-colors"
+                >
+                  <span>Browse Repository</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </div>
 
             {/* Key Snippets */}
@@ -359,15 +527,57 @@ export const PracticalExamView: React.FC<PracticalExamViewProps> = ({
                   <div key={i} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-teal-300">{snip.label}</span>
-                      <button
-                        onClick={() => handleCopy(snip.code)}
-                        className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-900 border border-slate-800"
-                      >
-                        {copiedText === snip.code ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedText === snip.code ? 'Copied!' : 'Copy Code'}</span>
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          id={`btn-bookmark-snip-${selectedRepo.id}-${i}`}
+                          type="button"
+                          onClick={() => {
+                            const snipId = `snip-${selectedRepo.id}-${i}`;
+                            toggleBookmark({
+                              id: snipId,
+                              type: 'command',
+                              title: `${selectedRepo.name}: ${snip.label}`,
+                              category: 'Practical Snippet',
+                              sourceTab: 'practical',
+                              sourceSubTab: 'big-three',
+                              targetId: selectedRepo.id,
+                              description: snip.notes,
+                              content: snip.code,
+                              notes: snip.notes,
+                              tags: [selectedRepo.name, 'Cheat Sheet'],
+                              createdAt: new Date().toISOString(),
+                            });
+                          }}
+                          className={`p-1.5 rounded border transition-colors ${
+                            isBookmarked(`snip-${selectedRepo.id}-${i}`)
+                              ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
+                              : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border-slate-800'
+                          }`}
+                          title={isBookmarked(`snip-${selectedRepo.id}-${i}`) ? 'Saved in My Bookmarks' : 'Bookmark snippet'}
+                        >
+                          {isBookmarked(`snip-${selectedRepo.id}-${i}`) ? (
+                            <BookmarkCheck className="w-3.5 h-3.5 text-teal-400" />
+                          ) : (
+                            <Bookmark className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleCopy(snip.code)}
+                          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-900 border border-slate-800"
+                        >
+                          {copiedText === snip.code ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedText === snip.code ? 'Copied!' : 'Copy Code'}</span>
+                        </button>
+                      </div>
                     </div>
-                    <pre className="p-3 rounded-lg bg-slate-900 text-xs text-emerald-300 font-mono whitespace-pre-wrap overflow-x-auto border border-slate-800/80">
+                    <pre 
+                      className="p-3 rounded-lg text-xs font-mono whitespace-pre-wrap overflow-x-auto border transition-colors"
+                      style={{
+                        backgroundColor: terminalTheme.bg,
+                        color: terminalTheme.prompt,
+                        borderColor: terminalTheme.border
+                      }}
+                    >
                       {snip.code}
                     </pre>
                     <p className="text-xs text-slate-400">{snip.notes}</p>

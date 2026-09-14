@@ -54,9 +54,17 @@ const ALL_SHORTCUTS: ShortcutItem[] = [
     id: 'close-modals',
     category: 'global',
     title: 'Dismiss / Close Active View',
-    description: 'Close open dialogs, search modal, user guide, or exit Zen Mode',
+    description: 'Close open dialogs, search modal, user guide, or exit Zen / Focus Mode',
     keys: ['Esc'],
-    context: 'Active Modals / Zen Mode',
+    context: 'Active Modals / Focus Mode',
+  },
+  {
+    id: 'toggle-focus-mode',
+    category: 'global',
+    title: 'Toggle Global Focus Mode',
+    description: 'Hide non-essential navigation and UI across all tabs for deep distraction-free study sessions',
+    keys: ['F'],
+    context: 'Anywhere in App',
   },
 
   // Direct Tab Navigation (1-9)
@@ -140,6 +148,15 @@ const ALL_SHORTCUTS: ShortcutItem[] = [
     keys: ['9'],
     context: 'Main View Switcher',
     targetTab: 'installation',
+  },
+  {
+    id: 'nav-bookmarks',
+    category: 'navigation',
+    title: 'B or 0: My Bookmarks & Revision',
+    description: 'Jump to saved blueprint topics, lab setups, cheat sheets, and command strings',
+    keys: ['B'],
+    context: 'Main View Switcher',
+    targetTab: 'bookmarks',
   },
 
   // Flashcards Mode

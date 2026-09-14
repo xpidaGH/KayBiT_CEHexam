@@ -15,15 +15,22 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Activity,
+  Flame
 } from 'lucide-react';
 import { EXAM_DOMAINS_PROGRESS } from '../data/progressData';
 import { ExamDomainProgress, DomainTaskItem } from '../types';
 import { STORAGE_KEYS } from '../data/appConfig';
 import { CircularProgressRing } from './CircularProgressRing';
 import { DomainStudyGoalsTracker } from './DomainStudyGoalsTracker';
+import { PerformanceHeatmapDashboard } from './PerformanceHeatmapDashboard';
+import { exportProgressAndBookmarksMarkdown } from '../utils/exportMarkdownReport';
 
 export const DomainProgressTracker: React.FC = () => {
+  const [activeSubView, setActiveSubView] = useState<'domains' | 'heatmap'>('domains');
+
   // --- Persistent Storage State ---
   const [completedTasks, setCompletedTasks] = useState<Record<string, boolean>>(() => {
     try {
@@ -222,55 +229,114 @@ export const DomainProgressTracker: React.FC = () => {
         </div>
       )}
 
-      {/* Hero Master Circular Progress Ring Card */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-          {/* Left info */}
-          <div className="space-y-3 max-w-xl text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              CEH v13 Blueprint Mastery Engine
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Exam Domain Progress & Lab Tracker
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Track your hands-on penetration testing labs, GitHub cheat sheets, and conceptual study notes 
-              across all 9 official CEH blueprint domains. Stored in your local storage for 100% offline study continuity.
-            </p>
+      {/* Top View Selector Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900 border border-slate-800">
+        <div className="flex items-center gap-2">
+          <button
+            id="subview-domains"
+            onClick={() => setActiveSubView('domains')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeSubView === 'domains'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Blueprint Domains & Objectives (9 Domains)</span>
+          </button>
 
-            {/* Action Bar */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-2">
-              <button
-                id="btn-export-progress"
-                onClick={handleExportProgress}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition-colors"
-                title="Save backup of your progress to a JSON file"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Export Progress</span>
-              </button>
+          <button
+            id="subview-heatmap"
+            onClick={() => setActiveSubView('heatmap')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeSubView === 'heatmap'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
+            }`}
+          >
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <span>Performance Heatmap & AI Smart Quiz</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              New
+            </span>
+          </button>
+        </div>
 
-              <label
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition-colors cursor-pointer"
-                title="Restore progress from a previously saved JSON backup"
-              >
-                <Upload className="w-3.5 h-3.5 text-teal-400" />
-                <span>Import Progress</span>
-                <input type="file" accept=".json" onChange={handleImportProgress} className="hidden" />
-              </label>
+        {/* Quick Markdown Export */}
+        <button
+          id="btn-export-markdown-summary"
+          onClick={exportProgressAndBookmarksMarkdown}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"
+          title="Download your full study progress and all bookmarks as Markdown (.md)"
+        >
+          <FileText className="w-3.5 h-3.5 text-teal-400" />
+          <span>Export Markdown Report (.md)</span>
+        </button>
+      </div>
 
-              <button
-                id="btn-reset-progress"
-                onClick={handleResetProgress}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-red-950/40 text-xs font-medium text-slate-400 hover:text-red-300 border border-slate-800 hover:border-red-900/50 transition-colors"
-                title="Reset all completed tasks"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-red-400" />
-                <span>Reset</span>
-              </button>
-            </div>
-          </div>
+      {activeSubView === 'heatmap' ? (
+        <PerformanceHeatmapDashboard />
+      ) : (
+        <>
+          {/* Hero Master Circular Progress Ring Card */}
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+              {/* Left info */}
+              <div className="space-y-3 max-w-xl text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  CEH v13 Blueprint Mastery Engine
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                  Exam Domain Progress & Lab Tracker
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Track your hands-on penetration testing labs, GitHub cheat sheets, and conceptual study notes 
+                  across all 9 official CEH blueprint domains. Stored in your local storage for 100% offline study continuity.
+                </p>
+
+                {/* Action Bar */}
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-2">
+                  <button
+                    id="btn-export-progress"
+                    onClick={handleExportProgress}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition-colors"
+                    title="Save backup of your progress to a JSON file"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Export JSON</span>
+                  </button>
+
+                  <button
+                    id="btn-export-markdown-action"
+                    onClick={exportProgressAndBookmarksMarkdown}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition-colors"
+                    title="Download human-readable markdown revision report"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-teal-400" />
+                    <span>Export Markdown (.md)</span>
+                  </button>
+
+                  <label
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+                    title="Restore progress from a previously saved JSON backup"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-teal-400" />
+                    <span>Import JSON</span>
+                    <input type="file" accept=".json" onChange={handleImportProgress} className="hidden" />
+                  </label>
+
+                  <button
+                    id="btn-reset-progress"
+                    onClick={handleResetProgress}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-red-950/40 text-xs font-medium text-slate-400 hover:text-red-300 border border-slate-800 hover:border-red-900/50 transition-colors"
+                    title="Reset all completed tasks"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-red-400" />
+                    <span>Reset</span>
+                  </button>
+                </div>
+              </div>
 
           {/* Center-Right: Large Master Circular Progress Ring */}
           <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-slate-950/70 border border-slate-800 shrink-0">
@@ -411,7 +477,7 @@ export const DomainProgressTracker: React.FC = () => {
               id={`card-${domain.id}`}
               className={`rounded-2xl border transition-all flex flex-col justify-between ${
                 isDomainComplete
-                  ? 'bg-slate-900/90 border-emerald-500/40 shadow-sm'
+                  ? 'bg-slate-900/95 border-emerald-500/60 shadow-[0_0_25px_rgba(16,185,129,0.22)] ring-1 ring-emerald-500/40'
                   : 'bg-slate-900 border-slate-800 hover:border-slate-700'
               }`}
             >
@@ -419,13 +485,19 @@ export const DomainProgressTracker: React.FC = () => {
               <div className="p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300">
                         Domain {domain.domainNumber}
                       </span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
                         {domain.blueprintWeight}% Exam Weight
                       </span>
+                      {isDomainComplete && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                          <Sparkles className="w-3 h-3 text-emerald-400" />
+                          100% Mastered
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-sm font-bold text-white leading-snug">
                       {domain.name}
@@ -531,6 +603,8 @@ export const DomainProgressTracker: React.FC = () => {
           );
         })}
       </div>
+        </>
+      )}
     </div>
   );
 };

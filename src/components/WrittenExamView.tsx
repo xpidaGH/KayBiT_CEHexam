@@ -15,13 +15,16 @@ import {
   CheckCircle2,
   Circle,
   PieChart,
-  PenLine
+  PenLine,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
 import { LAB_ENVIRONMENTS, GITHUB_REPO_NOTES, VIDEO_COURSES } from '../data/cehWrittenData';
 import { LabEnvironment, GitHubRepoNote, VideoCourse } from '../types';
 import { STORAGE_KEYS } from '../data/appConfig';
 import { CircularProgressRing } from './CircularProgressRing';
 import { WrittenDomainScratchpad } from './WrittenDomainScratchpad';
+import { isBookmarked, toggleBookmark } from '../utils/bookmarkManager';
 
 interface WrittenExamViewProps {
   onNavigateToProgress?: () => void;
@@ -53,6 +56,14 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
       return {};
     }
   });
+
+  const [, setBookmarkTick] = useState(0);
+
+  useEffect(() => {
+    const handleBookmarkChange = () => setBookmarkTick((prev) => prev + 1);
+    window.addEventListener('bookmarks-updated', handleBookmarkChange);
+    return () => window.removeEventListener('bookmarks-updated', handleBookmarkChange);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.COMPLETED_LABS, JSON.stringify(completedLabs));
@@ -294,6 +305,45 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
                 </button>
 
                 <button
+                  id={`btn-bookmark-lab-${selectedLab.id}`}
+                  type="button"
+                  onClick={() => {
+                    toggleBookmark({
+                      id: `lab-${selectedLab.id}`,
+                      type: 'lab',
+                      title: selectedLab.title,
+                      category: 'Lab Environment',
+                      sourceTab: 'written',
+                      sourceSubTab: 'labs',
+                      targetId: selectedLab.id,
+                      description: selectedLab.description,
+                      content: selectedLab.setupInstructions.join('\n'),
+                      notes: selectedLab.architecture,
+                      tags: [selectedLab.tag, selectedLab.difficulty, 'Lab Guide'],
+                      createdAt: new Date().toISOString(),
+                    });
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    isBookmarked(`lab-${selectedLab.id}`)
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  }`}
+                  title={isBookmarked(`lab-${selectedLab.id}`) ? 'Saved in My Bookmarks' : 'Bookmark this lab setup for quick access'}
+                >
+                  {isBookmarked(`lab-${selectedLab.id}`) ? (
+                    <>
+                      <BookmarkCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Bookmarked</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="w-3.5 h-3.5" />
+                      <span>Bookmark Lab</span>
+                    </>
+                  )}
+                </button>
+
+                <button
                   id={`btn-toggle-lab-${selectedLab.id}`}
                   onClick={() => toggleLabComplete(selectedLab.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
@@ -456,6 +506,44 @@ export const WrittenExamView: React.FC<WrittenExamViewProps> = ({ onNavigateToPr
                 >
                   <PenLine className="w-3.5 h-3.5 text-teal-400" />
                   <span>Jot Domain Notes</span>
+                </button>
+
+                <button
+                  id={`btn-bookmark-note-${selectedRepo.id}`}
+                  type="button"
+                  onClick={() => {
+                    toggleBookmark({
+                      id: `note-${selectedRepo.id}`,
+                      type: 'note',
+                      title: selectedRepo.title,
+                      category: 'Written Notes',
+                      sourceTab: 'written',
+                      sourceSubTab: 'notes',
+                      targetId: selectedRepo.id,
+                      description: selectedRepo.focus,
+                      content: selectedRepo.cheatSheetPreview,
+                      tags: [selectedRepo.authorRepo, 'CEH v13', 'Written Blueprint'],
+                      createdAt: new Date().toISOString(),
+                    });
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    isBookmarked(`note-${selectedRepo.id}`)
+                      ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  }`}
+                  title={isBookmarked(`note-${selectedRepo.id}`) ? 'Saved in My Bookmarks' : 'Bookmark this note for quick access'}
+                >
+                  {isBookmarked(`note-${selectedRepo.id}`) ? (
+                    <>
+                      <BookmarkCheck className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Bookmarked</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="w-3.5 h-3.5" />
+                      <span>Bookmark Note</span>
+                    </>
+                  )}
                 </button>
 
                 <button
