@@ -9,7 +9,8 @@ import {
   ExternalLink, 
   FileCode, 
   CheckCircle2,
-  Server
+  Server,
+  Shield
 } from 'lucide-react';
 import { 
   NATIVE_PLATFORMS, 
@@ -18,11 +19,13 @@ import {
   NativePlatformPackage 
 } from '../data/installationData';
 import { PlatformSvgIcons } from '../data/svgIcons';
+import { MultiplatformBrandShowcaseModal } from './MultiplatformBrandShowcaseModal';
 
 export const InstallationView: React.FC = () => {
   const [selectedPlatform, setSelectedPlatform] = useState<NativePlatformPackage>(NATIVE_PLATFORMS[0]);
   const [activeSnippetTab, setActiveSnippetTab] = useState<keyof typeof CONFIG_SNIPPETS>('capacitorConfig');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isBrandShowcaseOpen, setIsBrandShowcaseOpen] = useState<boolean>(false);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -65,8 +68,30 @@ export const InstallationView: React.FC = () => {
         </h1>
         <p className="text-slate-300 text-xs sm:text-sm max-w-3xl leading-relaxed">
           Package this unified Vite + React TypeScript codebase into standalone native binaries for 
-          <strong> Android (.apk)</strong>, <strong>Windows (.exe)</strong>, <strong>macOS (.dmg)</strong>, or instant <strong>Progressive Web App (PWA)</strong> with 100% offline access.
+          <strong> Android (.apk/.aab)</strong>, <strong>Windows (.exe/.msi)</strong>, <strong>macOS (.dmg Universal)</strong>, <strong>Linux (.AppImage/.deb)</strong>, or instant <strong>Progressive Web App (PWA)</strong> with 100% offline access.
         </p>
+
+        {/* Action shortcuts */}
+        <div className="flex flex-wrap items-center gap-2.5 pt-2">
+          <button
+            id="btn-installation-showcase"
+            onClick={() => setIsBrandShowcaseOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lime-500/10 hover:bg-lime-500/20 text-lime-400 border border-lime-500/30 text-xs font-semibold transition-all shadow-sm"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>KBT App Icon & Brand Specifications (Desktop, Mobile, Web)</span>
+          </button>
+
+          <a
+            href="/GitHub_Actions.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition-all shadow-sm"
+          >
+            <FileCode className="w-3.5 h-3.5 text-teal-400" />
+            <span>View GitHub_Actions.md CI/CD Guide</span>
+          </a>
+        </div>
       </div>
 
       {/* Target Platforms Grid */}
@@ -234,6 +259,13 @@ export const InstallationView: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Multiplatform Brand Logo & App Icon Showcase Modal */}
+      <MultiplatformBrandShowcaseModal
+        isOpen={isBrandShowcaseOpen}
+        onClose={() => setIsBrandShowcaseOpen(false)}
+      />
     </div>
   );
 };
+

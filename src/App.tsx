@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ExamTab } from './types';
+import { ExamTab, ThemeVariationId } from './types';
 import { Navbar } from './components/Navbar';
 import { UserGuideModal } from './components/UserGuideModal';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
@@ -29,6 +29,10 @@ import { QuickCopyDropdown } from './components/QuickCopyDropdown';
 import { StarViewButton } from './components/StarViewButton';
 import { SearchContextMenu } from './components/SearchContextMenu';
 import { BugReportModal } from './components/BugReportModal';
+import { ThemeSettingsModal } from './components/ThemeSettingsModal';
+import { MultiplatformBrandShowcaseModal } from './components/MultiplatformBrandShowcaseModal';
+import { PomodoroStudyWidget } from './components/PomodoroStudyWidget';
+import { getSavedTheme, applyTheme } from './utils/themeManager';
 import { APP_CONFIG, STORAGE_KEYS, NAV_ITEMS_CONFIG } from './data/appConfig';
 import { 
   ChevronRight,
@@ -36,7 +40,8 @@ import {
   Search,
   Keyboard,
   Maximize2,
-  Focus
+  Focus,
+  Palette
 } from 'lucide-react';
 
 export default function App() {
@@ -61,6 +66,10 @@ export default function App() {
     return localStorage.getItem(STORAGE_KEYS.FOCUS_MODE) === 'true';
   });
 
+  const [activeThemeVariation, setActiveThemeVariation] = useState<ThemeVariationId>(() => getSavedTheme());
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState<boolean>(false);
+
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
@@ -69,6 +78,11 @@ export default function App() {
   const [isContextMenuOpen, setIsContextMenuOpen] = useState<boolean>(false);
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isBackgroundSyncActive, setIsBackgroundSyncActive] = useState<boolean>(false);
+
+  // Apply initial theme variation on mount
+  useEffect(() => {
+    applyTheme(activeThemeVariation);
+  }, [activeThemeVariation]);
 
   // Background process activity heartbeat (AI search index synchronization & storage updates)
   useEffect(() => {
@@ -137,6 +151,16 @@ export default function App() {
 
       // 3. Escape key closes open modals or exits focus mode
       if (e.key === 'Escape') {
+        if (isThemeModalOpen) {
+          e.preventDefault();
+          setIsThemeModalOpen(false);
+          return;
+        }
+        if (isBrandModalOpen) {
+          e.preventDefault();
+          setIsBrandModalOpen(false);
+          return;
+        }
         if (isSettingsOpen) {
           e.preventDefault();
           setIsSettingsOpen(false);
@@ -256,6 +280,9 @@ export default function App() {
           isFocusMode={isFocusMode}
           onToggleFocusMode={() => setIsFocusMode(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenThemeSettings={() => setIsThemeModalOpen(true)}
+          onOpenBrandShowcase={() => setIsBrandModalOpen(true)}
+          activeThemeId={activeThemeVariation}
         />
       )}
 
@@ -343,6 +370,17 @@ export default function App() {
 
               {/* User Pinned Snippets & Quick-Links Popover */}
               <PinnedSnippetsPopover onNavigateTab={(tab) => setActiveTab(tab)} />
+
+              {/* Theme Settings Quick Trigger */}
+              <button
+                id="btn-context-theme-settings"
+                onClick={() => setIsThemeModalOpen(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-white border border-indigo-500/30 text-[11px] font-medium transition-all group"
+                title="Theme Settings - Choose from 5 distinct UI variations (Editorial, Technical, Warm, Dark, Vibrant)"
+              >
+                <Palette className="w-3 h-3 text-indigo-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Theme</span>
+              </button>
 
               {/* Keyboard Shortcuts Trigger */}
               <button
@@ -453,6 +491,23 @@ export default function App() {
         isOpen={isBugReportOpen}
         onClose={() => setIsBugReportOpen(false)}
         activeTab={activeTab}
+      />
+
+      {/* Persistent Pomodoro-Style Study Timer Widget (survives across tab navigation) */}
+      <PomodoroStudyWidget />
+
+      {/* Theme Settings Modal (5 Distinct UI Variations) */}
+      <ThemeSettingsModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        activeThemeId={activeThemeVariation}
+        onSelectTheme={(id) => setActiveThemeVariation(id)}
+      />
+
+      {/* Multiplatform Brand Logo & App Icon Showcase Modal */}
+      <MultiplatformBrandShowcaseModal
+        isOpen={isBrandModalOpen}
+        onClose={() => setIsBrandModalOpen(false)}
       />
 
       {/* Global Auto-Save Notification Toast */}

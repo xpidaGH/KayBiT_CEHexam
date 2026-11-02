@@ -20,13 +20,19 @@ import {
   Bookmark,
   Volume2,
   VolumeX,
-  Settings
+  Settings,
+  Palette,
+  Timer,
+  Flame,
+  Shield
 } from 'lucide-react';
-import { ExamTab } from '../types';
+import { ExamTab, ThemeVariationId } from '../types';
 import { SUPPORTED_LANGUAGES } from '../data/translations';
 import { NAV_ITEMS_CONFIG, APP_CONFIG } from '../data/appConfig';
 import { isAudioCuesEnabled, setAudioCuesEnabled } from '../utils/audioCues';
 import { getBookmarks } from '../utils/bookmarkManager';
+import { BrandLogo } from './BrandLogo';
+import { getSavedPomodoroState, PomodoroState } from '../utils/pomodoroManager';
 
 interface NavbarProps {
   activeTab: ExamTab;
@@ -41,6 +47,9 @@ interface NavbarProps {
   isFocusMode?: boolean;
   onToggleFocusMode?: () => void;
   onOpenSettings?: () => void;
+  onOpenThemeSettings?: () => void;
+  onOpenBrandShowcase?: () => void;
+  activeThemeId?: ThemeVariationId;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -56,8 +65,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   isFocusMode = false,
   onToggleFocusMode,
   onOpenSettings,
+  onOpenThemeSettings,
+  onOpenBrandShowcase,
+  activeThemeId = 'dark',
 }) => {
   const [audioMuted, setAudioMuted] = useState<boolean>(() => !isAudioCuesEnabled());
+  const [pomodoroState, setPomodoroState] = useState<PomodoroState>(() => getSavedPomodoroState());
+
+  useEffect(() => {
+    const handlePomodoroChange = (e: CustomEvent<PomodoroState>) => {
+      setPomodoroState(e.detail);
+    };
+    window.addEventListener('pomodoro-state-changed' as any, handlePomodoroChange);
+    return () => window.removeEventListener('pomodoro-state-changed' as any, handlePomodoroChange);
+  }, []);
+
   const [bookmarkCount, setBookmarkCount] = useState<number>(() => getBookmarks().length);
 
   useEffect(() => {
@@ -122,20 +144,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('written')} 
             className="flex items-center gap-3 cursor-pointer group shrink-0"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform border border-emerald-400/30">
-              <Terminal className="w-5 h-5 text-slate-950 stroke-[2.5]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg tracking-tight text-slate-100 font-mono">
-                  KayBiT<span className="text-emerald-400">_CEHexam</span>
-                </span>
-                <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                  {APP_CONFIG.blueprintVersion} Ready
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 hidden sm:block">{APP_CONFIG.title}</p>
-            </div>
+            <BrandLogo variant="web-header" showText={true} versionBadge={`${APP_CONFIG.blueprintVersion} Ready`} />
           </div>
 
           {/* Navigation Tabs (Desktop) */}
@@ -283,27 +292,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="hidden sm:inline">Guide</span>
             </button>
 
-            {/* Theme Toggle Button (Midnight vs Deep Slate) */}
-            {onToggleTheme && (
+            {/* Theme Settings Modal Trigger (5 Variations) */}
+            {onOpenThemeSettings && (
               <button
-                id="btn-theme-toggle"
-                onClick={onToggleTheme}
-                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium border border-slate-800 hover:border-slate-700 transition-all shadow-sm group"
-                title={
-                  theme === 'midnight'
-                    ? "Theme: Midnight (High Contrast) • Switch to Deep Slate"
-                    : "Theme: Deep Slate (Softer Eye-Care) • Switch to Midnight"
-                }
-                aria-label="Toggle App Theme"
+                id="btn-navbar-theme-settings"
+                onClick={onOpenThemeSettings}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-white border border-indigo-500/30 hover:border-indigo-400 text-xs font-semibold transition-all shadow-sm group"
+                title="Theme Settings - Choose from 5 UI variations (Editorial, Technical, Warm, Dark, Vibrant)"
+                aria-label="Theme Settings"
               >
-                {theme === 'midnight' ? (
-                  <Moon className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
-                ) : (
-                  <Sun className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-                )}
-                <span className="hidden xl:inline text-slate-300">
-                  {theme === 'midnight' ? 'Midnight' : 'Slate'}
-                </span>
+                <Palette className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 group-hover:text-indigo-300 transition-all" />
+                <span className="hidden sm:inline">Theme Settings</span>
+              </button>
+            )}
+
+            {/* Multiplatform Brand Logo & App Icon Showcase Modal Trigger */}
+            {onOpenBrandShowcase && (
+              <button
+                id="btn-navbar-brand-showcase"
+                onClick={onOpenBrandShowcase}
+                className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-lime-400 hover:text-lime-300 border border-slate-800 hover:border-lime-500/40 text-xs font-medium transition-all shadow-sm group"
+                title="View KBT Spider Icon across Desktop Title Bars, Mobile App Bars & Web Headers"
+              >
+                <Shield className="w-3.5 h-3.5 text-lime-400 group-hover:scale-110 transition-transform" />
+                <span>App Icon</span>
               </button>
             )}
 

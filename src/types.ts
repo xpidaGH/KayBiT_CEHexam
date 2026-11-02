@@ -263,4 +263,38 @@ export interface ScenarioPracticeQuestion {
   userSelectedOption?: number;
 }
 
+export type ThemeVariationId = 'editorial' | 'technical' | 'warm' | 'dark' | 'vibrant';
 
+export interface ThemeVariation {
+  id: ThemeVariationId;
+  name: string;
+  tagline: string;
+  description: string;
+  fontCategory: string;
+  aesthetic: string;
+  preview: {
+    bg: string;
+    surface: string;
+    card: string;
+    border: string;
+    accent: string;
+    text: string;
+    badgeBg: string;
+    badgeText: string;
+  };
+}
+
+export type PomodoroTimerMode = 'focus' | 'short-break' | 'long-break';
+
+export interface PomodoroSettings {
+  focusDurationMinutes: number;
+  shortBreakMinutes: number;
+  longBreakMinutes: number;
+  longBreakInterval: number;
+  autoStartBreaks: boolean;
+  autoStartPomodoros: boolean;
+  soundEnabled: boolean;
+  completedSessions: number;
+  totalMinutesStudied: number;
+  activeTopic?: string;
+}

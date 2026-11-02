@@ -1,45 +1,301 @@
 @import "tailwindcss";
 
-@layer base {
-  body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-  code, pre, kbd {
-    font-family: 'Fira Code', ui-monospace, monospace;
+@layer utilities {
+  .mask-squircle {
+    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="black" d="M 0,50 C 0,4 4,0 50,0 C 96,0 100,4 100,50 C 100,96 96,100 50,100 C 4,100 0,96 0,50 Z"/></svg>');
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="black" d="M 0,50 C 0,4 4,0 50,0 C 96,0 100,4 100,50 C 100,96 96,100 50,100 C 4,100 0,96 0,50 Z"/></svg>');
+    -webkit-mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
   }
 }
 
-/* Theme styles */
-.theme-midnight {
+:root {
+  --app-font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --app-bg: #030712;
   --app-surface: #0b0f19;
   --app-card: #0f172a;
   --app-border: #1e293b;
-  background-color: #030712;
+  --app-accent: #10b981;
+  --app-accent-hover: #059669;
+  --app-text-primary: #f8fafc;
+  --app-text-muted: #94a3b8;
+  --app-radius: 0.75rem;
 }
 
-.theme-deep-slate {
-  --app-bg: #0f172a;
-  --app-surface: #1e293b;
-  --app-card: #334155;
-  --app-border: #334155;
-  background-color: #0f172a;
+@layer base {
+  body {
+    font-family: var(--app-font-family);
+    background-color: var(--app-bg);
+    color: var(--app-text-primary);
+  }
+  code, pre, kbd {
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  }
 }
 
-.theme-deep-slate .bg-slate-950 {
-  background-color: #0f172a !important;
+/* ==========================================================================
+   5 DISTINCT UI THEME VARIATIONS
+   1. Editorial & Refined (Serif fonts, generous whitespace, clean light background)
+   2. Technical & Systematic (Monospace fonts, high-density, visible grid borders)
+   3. Warm & Approachable (Pastel cards, rounded pill buttons, soft corners)
+   4. Elegant Dark (Sleek dark mode with tailored high-contrast accents)
+   5. Vibrant Palette (High-energy, bold color schemes)
+   ========================================================================== */
+
+/* 1. EDITORIAL & REFINED */
+.theme-editorial,
+[data-theme="editorial"] {
+  --app-font-family: 'Lora', 'Playfair Display', Georgia, Cambria, serif;
+  --app-bg: #faf9f6;
+  --app-surface: #f3efe6;
+  --app-card: #ffffff;
+  --app-border: #e2ded4;
+  --app-accent: #7c3aed;
+  --app-accent-hover: #6d28d9;
+  --app-text-primary: #1c1917;
+  --app-text-muted: #57534e;
+  --app-radius: 0.5rem;
+  background-color: #faf9f6 !important;
+  color: #1c1917 !important;
+  font-family: var(--app-font-family) !important;
 }
 
-.theme-deep-slate .bg-slate-900 {
-  background-color: #1e293b !important;
+.theme-editorial .bg-slate-950 {
+  background-color: #faf9f6 !important;
+  color: #1c1917 !important;
 }
 
-.theme-deep-slate .border-slate-800 {
-  border-color: #334155 !important;
+.theme-editorial .bg-slate-900,
+.theme-editorial .bg-slate-900\/90,
+.theme-editorial .bg-slate-900\/80,
+.theme-editorial .bg-slate-900\/60 {
+  background-color: #f5f2eb !important;
+  color: #1c1917 !important;
 }
 
-.theme-deep-slate .border-slate-900 {
-  border-color: #1e293b !important;
+.theme-editorial .bg-slate-800,
+.theme-editorial .bg-slate-800\/80 {
+  background-color: #ebe6dc !important;
+  color: #292524 !important;
+}
+
+.theme-editorial .border-slate-800,
+.theme-editorial .border-slate-800\/80,
+.theme-editorial .border-slate-700,
+.theme-editorial .border-slate-700\/70,
+.theme-editorial .border-slate-900 {
+  border-color: #e2ded4 !important;
+}
+
+.theme-editorial .text-slate-100,
+.theme-editorial .text-slate-200,
+.theme-editorial .text-white {
+  color: #1c1917 !important;
+}
+
+.theme-editorial .text-slate-300,
+.theme-editorial .text-slate-400 {
+  color: #57534e !important;
+}
+
+.theme-editorial .text-slate-500,
+.theme-editorial .text-slate-600 {
+  color: #78716c !important;
+}
+
+/* 2. TECHNICAL & SYSTEMATIC */
+.theme-technical,
+[data-theme="technical"] {
+  --app-font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  --app-bg: #070b12;
+  --app-surface: #0c121e;
+  --app-card: #101828;
+  --app-border: #1e3a5f;
+  --app-accent: #00ff66;
+  --app-accent-hover: #00dd55;
+  --app-text-primary: #e2e8f0;
+  --app-text-muted: #64748b;
+  --app-radius: 0.25rem;
+  background-color: #070b12 !important;
+  color: #e2e8f0 !important;
+  font-family: var(--app-font-family) !important;
+  letter-spacing: -0.01em;
+}
+
+.theme-technical .bg-slate-950 {
+  background-color: #070b12 !important;
+}
+
+.theme-technical .bg-slate-900,
+.theme-technical .bg-slate-900\/90,
+.theme-technical .bg-slate-900\/80,
+.theme-technical .bg-slate-900\/60 {
+  background-color: #0c121e !important;
+}
+
+.theme-technical .bg-slate-800,
+.theme-technical .bg-slate-800\/80 {
+  background-color: #131c2e !important;
+}
+
+.theme-technical .border-slate-800,
+.theme-technical .border-slate-800\/80,
+.theme-technical .border-slate-700,
+.theme-technical .border-slate-700\/70,
+.theme-technical .border-slate-900 {
+  border-color: #1e3a5f !important;
+}
+
+.theme-technical button,
+.theme-technical div,
+.theme-technical input,
+.theme-technical span {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+}
+
+/* 3. WARM & APPROACHABLE */
+.theme-warm,
+[data-theme="warm"] {
+  --app-font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --app-bg: #fdfaf6;
+  --app-surface: #f6efe6;
+  --app-card: #ffffff;
+  --app-border: #ede1d1;
+  --app-accent: #f97316;
+  --app-accent-hover: #ea580c;
+  --app-text-primary: #292524;
+  --app-text-muted: #78716c;
+  --app-radius: 1.25rem;
+  background-color: #fdfaf6 !important;
+  color: #292524 !important;
+}
+
+.theme-warm .bg-slate-950 {
+  background-color: #fdfaf6 !important;
+  color: #292524 !important;
+}
+
+.theme-warm .bg-slate-900,
+.theme-warm .bg-slate-900\/90,
+.theme-warm .bg-slate-900\/80,
+.theme-warm .bg-slate-900\/60 {
+  background-color: #f7f1e7 !important;
+  color: #292524 !important;
+}
+
+.theme-warm .bg-slate-800,
+.theme-warm .bg-slate-800\/80 {
+  background-color: #eee3d5 !important;
+  color: #292524 !important;
+}
+
+.theme-warm .border-slate-800,
+.theme-warm .border-slate-800\/80,
+.theme-warm .border-slate-700,
+.theme-warm .border-slate-700\/70,
+.theme-warm .border-slate-900 {
+  border-color: #ede1d1 !important;
+}
+
+.theme-warm .text-slate-100,
+.theme-warm .text-slate-200,
+.theme-warm .text-white {
+  color: #292524 !important;
+}
+
+.theme-warm .text-slate-300,
+.theme-warm .text-slate-400 {
+  color: #78716c !important;
+}
+
+.theme-warm .text-emerald-400,
+.theme-warm .text-emerald-300 {
+  color: #ea580c !important;
+}
+
+.theme-warm .bg-emerald-500 {
+  background-color: #f97316 !important;
+}
+
+.theme-warm button {
+  border-radius: 9999px !important;
+}
+
+/* 4. ELEGANT DARK */
+.theme-dark,
+[data-theme="dark"] {
+  --app-font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --app-bg: #030712;
+  --app-surface: #0b0f19;
+  --app-card: #0f172a;
+  --app-border: #1e293b;
+  --app-accent: #10b981;
+  --app-accent-hover: #059669;
+  --app-text-primary: #f8fafc;
+  --app-text-muted: #94a3b8;
+  --app-radius: 0.75rem;
+  background-color: #030712 !important;
+  color: #f8fafc !important;
+}
+
+.theme-dark .bg-slate-950 {
+  background-color: #030712 !important;
+}
+
+.theme-dark .bg-slate-900 {
+  background-color: #0b0f19 !important;
+}
+
+/* 5. VIBRANT PALETTE */
+.theme-vibrant,
+[data-theme="vibrant"] {
+  --app-font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --app-bg: #0c071e;
+  --app-surface: #140d2f;
+  --app-card: #1d1344;
+  --app-border: #3b2575;
+  --app-accent: #ec4899;
+  --app-accent-hover: #db2777;
+  --app-text-primary: #fdf4ff;
+  --app-text-muted: #c084fc;
+  --app-radius: 0.85rem;
+  background-color: #0c071e !important;
+  color: #fdf4ff !important;
+}
+
+.theme-vibrant .bg-slate-950 {
+  background-color: #0c071e !important;
+}
+
+.theme-vibrant .bg-slate-900,
+.theme-vibrant .bg-slate-900\/90,
+.theme-vibrant .bg-slate-900\/80,
+.theme-vibrant .bg-slate-900\/60 {
+  background-color: #140d2f !important;
+}
+
+.theme-vibrant .bg-slate-800,
+.theme-vibrant .bg-slate-800\/80 {
+  background-color: #221550 !important;
+}
+
+.theme-vibrant .border-slate-800,
+.theme-vibrant .border-slate-800\/80,
+.theme-vibrant .border-slate-700,
+.theme-vibrant .border-slate-700\/70,
+.theme-vibrant .border-slate-900 {
+  border-color: #3b2575 !important;
+}
+
+.theme-vibrant .text-emerald-400,
+.theme-vibrant .text-emerald-300 {
+  color: #f472b6 !important;
+}
+
+.theme-vibrant .bg-emerald-500 {
+  background-color: #ec4899 !important;
 }
 
 /* Custom subtle scrollbars */
@@ -48,7 +304,7 @@
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b1120;
+  background: rgba(11, 17, 32, 0.6);
 }
 ::-webkit-scrollbar-thumb {
   background: #1e293b;
