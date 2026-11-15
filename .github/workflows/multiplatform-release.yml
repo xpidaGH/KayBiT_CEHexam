@@ -2,10 +2,8 @@ name: Multiplatform Production Build, Code-Sign & Distribution
 
 on:
   push:
-    branches: [ main, release/* ]
-    tags: [ 'v*' ]
-  release:
-    types: [ created ]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 concurrency:
